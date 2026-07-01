@@ -1,0 +1,72 @@
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+html,
+body {
+  background-color: #f8f9ff;
+  color: #121c28;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-border bg-surface;
+  }
+  .btn {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-on-primary hover:bg-primary-hover;
+  }
+  .btn-secondary {
+    @apply btn border border-border bg-surface text-ink hover:bg-surface-subtle;
+  }
+  .input {
+    @apply h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-ink outline-none placeholder:text-ink-subtle focus:border-primary focus:ring-1 focus:ring-primary;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-ink-muted;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1dbec;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bcc9c9;
+}

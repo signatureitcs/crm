@@ -1,0 +1,38 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth";
+import { Sidebar } from "@/components/sidebar";
+import { Topbar } from "@/components/topbar";
+import type { Country, Project } from "@/lib/types";
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/onboarding");
+
+  const supabase = createClient();
+  const [{ data: countries }, { data: projects }] = await Promise.all([
+    supabase.from("countries").select("*").order("name"),
+    supabase
+      .from("projects")
+      .select("id, name, country_id, project_type, current_phase, developer_id, designer_id, seo_id, created_at")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Sidebar
+        countries={(countries as Country[]) ?? []}
+        projects={(projects as Project[]) ?? []}
+        isManager={profile.role === "manager"}
+      />
+      <div className="ml-[240px] flex min-h-screen flex-col">
+        <Topbar profile={profile} />
+        <main className="flex-1">{children}</main>
+      </div>
+    </div>
+  );
+}
