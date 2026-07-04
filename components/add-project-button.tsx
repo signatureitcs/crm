@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/icon";
 import { Dialog } from "@/components/dialog";
+import { SubmitButton } from "@/components/submit-button";
 import { addProject } from "@/app/dashboard/actions";
 import type { Profile, ProjectType } from "@/lib/types";
 
@@ -100,9 +101,7 @@ export function AddProjectButton({
             >
               Cancel
             </button>
-            <button type="submit" className="btn-primary">
-              Create project
-            </button>
+            <SubmitButton pendingText="Creating…">Create project</SubmitButton>
           </div>
         </form>
       </Dialog>
