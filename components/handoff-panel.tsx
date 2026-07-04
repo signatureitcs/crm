@@ -28,22 +28,35 @@ export function HandoffPanel({
           {formatDate(handoff.created_at)}
         </span>
       </div>
-      <ul className="space-y-1.5">
+      <ul className="space-y-2">
         {snapshot.map((item, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-2 text-sm text-ink-muted"
-          >
-            <Icon
-              name="check_circle"
-              filled
-              size={16}
-              className="text-status-done-text"
-            />
-            <span className="line-through">{item.label}</span>
+          <li key={i} className="text-sm">
+            <div className="flex items-center gap-2 text-ink-muted">
+              <Icon
+                name="check_circle"
+                filled
+                size={16}
+                className="text-status-done-text"
+              />
+              <span className="font-medium">{item.label}</span>
+            </div>
+            {item.note && (
+              <p className="ml-6 mt-0.5 text-ink-muted">{item.note}</p>
+            )}
           </li>
         ))}
       </ul>
+
+      {handoff.dev_summary && (
+        <div className="mt-3 border-t border-status-done-text/20 pt-3">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+            Completion summary
+          </p>
+          <p className="whitespace-pre-wrap text-sm text-ink-muted">
+            {handoff.dev_summary}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

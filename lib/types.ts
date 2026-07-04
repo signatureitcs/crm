@@ -80,6 +80,7 @@ export interface ChecklistCompletion {
   phase_id: string | null;
   template_id: string;
   checked: boolean;
+  note: string | null;
   checked_by: string | null;
   checked_at: string | null;
 }
@@ -89,7 +90,10 @@ export interface Handoff {
   project_id: string;
   from_role: string | null;
   to_profile_id: string | null;
-  checklist_snapshot: { label: string; checked: boolean }[] | null;
+  checklist_snapshot:
+    | { label: string; checked: boolean; note?: string | null }[]
+    | null;
+  dev_summary: string | null;
   created_at: string;
 }
 

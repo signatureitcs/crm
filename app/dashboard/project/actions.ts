@@ -130,15 +130,21 @@ export async function toggleChecklistItem(
   phaseId: string,
   templateId: string,
   checked: boolean,
+  note: string,
 ) {
+  // A box can only be checked once its justification is filled in.
+  const trimmed = note.trim();
+  if (checked && !trimmed) {
+    throw new Error("Add a justification before checking this item.");
+  }
   const { supabase, userId } = await getUser();
-  // Upsert on the (project_id, template_id) unique key.
   const { error } = await supabase.from("checklist_completions").upsert(
     {
       project_id: projectId,
       phase_id: phaseId,
       template_id: templateId,
       checked,
+      note: trimmed || null,
       checked_by: checked ? userId : null,
       checked_at: checked ? new Date().toISOString() : null,
     },
@@ -148,14 +154,40 @@ export async function toggleChecklistItem(
   revalidatePath(`/dashboard/project/${projectId}`);
 }
 
+// Persist a justification without changing the checked state (autosave on blur).
+export async function saveChecklistNote(
+  projectId: string,
+  phaseId: string,
+  templateId: string,
+  note: string,
+) {
+  const { supabase } = await getUser();
+  const { error } = await supabase.from("checklist_completions").upsert(
+    {
+      project_id: projectId,
+      phase_id: phaseId,
+      template_id: templateId,
+      note: note.trim() || null,
+    },
+    { onConflict: "project_id,template_id" },
+  );
+  if (error) throw new Error(error.message);
+}
+
 export async function handoffToSeo(input: {
   projectId: string;
   devPhaseId: string;
   seoPhaseId: string;
   seoProfileId: string;
+  devSummary: string;
 }) {
   const { supabase, userId } = await getUser();
   const { projectId, seoPhaseId, seoProfileId } = input;
+  const devSummary = input.devSummary.trim();
+
+  if (!devSummary) {
+    throw new Error("Add a completion summary before handing off.");
+  }
 
   // Build the snapshot and verify every developer checklist item is checked.
   const [{ data: templates }, { data: completions }] = await Promise.all([
@@ -166,28 +198,33 @@ export async function handoffToSeo(input: {
       .order("sort_order"),
     supabase
       .from("checklist_completions")
-      .select("template_id, checked")
+      .select("template_id, checked, note")
       .eq("project_id", projectId),
   ]);
 
   const completedMap = new Map(
-    (completions ?? []).map((c) => [c.template_id, c.checked]),
+    (completions ?? []).map((c) => [c.template_id, c]),
   );
-  const snapshot = (templates ?? []).map((t) => ({
-    label: t.label,
-    checked: Boolean(completedMap.get(t.id)),
-  }));
+  const snapshot = (templates ?? []).map((t) => {
+    const c = completedMap.get(t.id);
+    return {
+      label: t.label,
+      checked: Boolean(c?.checked),
+      note: c?.note ?? null,
+    };
+  });
 
   if (snapshot.length === 0 || !snapshot.every((s) => s.checked)) {
     throw new Error("All checklist items must be complete before handing off.");
   }
 
-  // 1. Record the handoff with a frozen snapshot.
+  // 1. Record the handoff with a frozen snapshot + developer write-up.
   const { error: hErr } = await supabase.from("handoffs").insert({
     project_id: projectId,
     from_role: "developer",
     to_profile_id: seoProfileId,
     checklist_snapshot: snapshot,
+    dev_summary: devSummary,
   });
   if (hErr) throw new Error(hErr.message);
 

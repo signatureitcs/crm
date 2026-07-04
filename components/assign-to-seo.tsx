@@ -7,6 +7,7 @@ import { Dialog } from "@/components/dialog";
 import { clsx } from "@/lib/clsx";
 import {
   toggleChecklistItem,
+  saveChecklistNote,
   handoffToSeo,
 } from "@/app/dashboard/project/actions";
 import type { ChecklistCompletion, ChecklistTemplate, Profile } from "@/lib/types";
@@ -34,28 +35,48 @@ export function AssignToSeo({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [seoId, setSeoId] = useState(seoPeople[0]?.id ?? "");
+  const [devSummary, setDevSummary] = useState("");
 
-  // Local checked state, keyed by template id — drives the disabled gate.
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     items.forEach((i) => (init[i.template.id] = Boolean(i.completion?.checked)));
     return init;
   });
+  const [notes, setNotes] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    items.forEach((i) => (init[i.template.id] = i.completion?.note ?? ""));
+    return init;
+  });
 
   const allChecked =
     items.length > 0 && items.every((i) => checked[i.template.id]);
+  const canAssign = allChecked && !!seoId && devSummary.trim().length > 0;
 
   function onToggle(templateId: string, next: boolean) {
     if (!canEdit) return;
+    if (next && !notes[templateId]?.trim()) return; // gated by justification
     setChecked((c) => ({ ...c, [templateId]: next }));
     startTransition(() =>
-      toggleChecklistItem(projectId, phaseId, templateId, next),
+      toggleChecklistItem(
+        projectId,
+        phaseId,
+        templateId,
+        next,
+        notes[templateId] ?? "",
+      ),
+    );
+  }
+
+  function onNoteBlur(templateId: string) {
+    if (!canEdit) return;
+    startTransition(() =>
+      saveChecklistNote(projectId, phaseId, templateId, notes[templateId] ?? ""),
     );
   }
 
   function onAssign() {
     setError(null);
-    if (!allChecked || !seoId) return;
+    if (!canAssign) return;
     startTransition(async () => {
       try {
         await handoffToSeo({
@@ -63,6 +84,7 @@ export function AssignToSeo({
           devPhaseId: phaseId,
           seoPhaseId,
           seoProfileId: seoId,
+          devSummary,
         });
         setOpen(false);
         router.refresh();
@@ -86,12 +108,13 @@ export function AssignToSeo({
         open={open}
         onClose={() => setOpen(false)}
         title="Assign to SEO"
-        description="Final developer sign-off required before transition."
+        description="Justify each item, write a completion summary, then hand off."
+        maxWidth="max-w-lg"
       >
         <div className="space-y-5">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-subtle">
-              Checklist
+              Developer checklist
             </p>
             <div className="space-y-2">
               {items.length === 0 && (
@@ -101,31 +124,71 @@ export function AssignToSeo({
               )}
               {items.map(({ template }) => {
                 const isChecked = checked[template.id];
+                const hasNote = !!notes[template.id]?.trim();
                 return (
-                  <label
+                  <div
                     key={template.id}
                     className={clsx(
-                      "flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm transition-colors",
+                      "rounded-lg border p-3",
                       isChecked
-                        ? "border-border bg-status-done-bg/30 font-medium text-status-done-text"
-                        : "border-status-error-text/20 bg-status-error-bg/50 font-medium text-status-error-text",
+                        ? "border-border bg-status-done-bg/30"
+                        : "border-border bg-surface",
                     )}
                   >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-ink-subtle text-primary focus:ring-primary"
-                      checked={isChecked}
-                      disabled={!canEdit || pending}
-                      onChange={(e) => onToggle(template.id, e.target.checked)}
+                    <label className="flex cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-ink-subtle text-primary focus:ring-primary disabled:opacity-40"
+                        checked={isChecked}
+                        disabled={!canEdit || pending || (!isChecked && !hasNote)}
+                        onChange={(e) => onToggle(template.id, e.target.checked)}
+                      />
+                      <span
+                        className={clsx(
+                          "flex-1 text-sm font-medium",
+                          isChecked
+                            ? "text-status-done-text"
+                            : "text-ink",
+                        )}
+                      >
+                        {template.label}
+                      </span>
+                      {!hasNote && (
+                        <span className="text-[11px] text-ink-subtle">
+                          justify to check
+                        </span>
+                      )}
+                    </label>
+                    <textarea
+                      rows={2}
+                      className="input mt-2 h-auto py-2 text-sm"
+                      placeholder="What did you do? (e.g. format used, form fields, from + emails)"
+                      value={notes[template.id] ?? ""}
+                      disabled={!canEdit}
+                      onChange={(e) =>
+                        setNotes((n) => ({ ...n, [template.id]: e.target.value }))
+                      }
+                      onBlur={() => onNoteBlur(template.id)}
                     />
-                    <span className="flex-1">{template.label}</span>
-                    {!isChecked && (
-                      <Icon name="priority_high" size={18} />
-                    )}
-                  </label>
+                  </div>
                 );
               })}
             </div>
+          </div>
+
+          <div>
+            <label className="label" htmlFor="dev_summary">
+              Completion summary <span className="text-status-error-text">*</span>
+            </label>
+            <textarea
+              id="dev_summary"
+              rows={4}
+              className="input h-auto py-2"
+              placeholder="Describe what was built, start to end…"
+              value={devSummary}
+              disabled={!canEdit}
+              onChange={(e) => setDevSummary(e.target.value)}
+            />
           </div>
 
           <div>
@@ -153,10 +216,10 @@ export function AssignToSeo({
             </p>
           )}
 
-          {!allChecked && (
+          {!canAssign && (
             <div className="flex items-center justify-center gap-2 text-sm text-status-error-text">
               <Icon name="info" size={16} />
-              Complete all checklist items to hand off
+              Justify + check every item and write a summary to hand off
             </div>
           )}
 
@@ -169,7 +232,7 @@ export function AssignToSeo({
             </button>
             <button
               className="btn-primary flex-1"
-              disabled={!allChecked || !seoId || pending}
+              disabled={!canAssign || pending}
               onClick={onAssign}
             >
               {pending ? "Assigning…" : "Assign"}
