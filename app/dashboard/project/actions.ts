@@ -99,6 +99,7 @@ export async function setTaskStatus(
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/project/${projectId}`);
   revalidatePath(`/dashboard/project/${projectId}/kanban`);
+  revalidatePath("/dashboard/overview");
 }
 
 export async function deleteTask(taskId: string, projectId: string) {

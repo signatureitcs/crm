@@ -43,6 +43,19 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3">
+        <Link
+          href="/dashboard/overview"
+          className={clsx(
+            "mb-3 flex h-10 items-center gap-3 rounded-lg px-3 text-sm",
+            pathname === "/dashboard/overview"
+              ? "bg-status-todo-bg font-medium text-primary"
+              : "text-ink-muted hover:bg-surface-subtle",
+          )}
+        >
+          <Icon name="dashboard" size={20} />
+          <span>Overview</span>
+        </Link>
+
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
           Countries
         </p>
