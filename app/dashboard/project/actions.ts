@@ -332,6 +332,45 @@ export async function deleteSitelinkRow(rowId: string, projectId: string) {
   revalidatePath(`/dashboard/project/${projectId}/sitelinks`);
 }
 
+// Bulk import (CSV) into a target project's sitelinks.
+export async function importSitelinkRows(
+  projectId: string,
+  rows: {
+    page_url: string;
+    sitelink_1: string;
+    sitelink_2: string;
+    sitelink_3: string;
+  }[],
+) {
+  if (!projectId || rows.length === 0) return { inserted: 0 };
+  const { supabase } = await getUser();
+
+  // Continue numbering after existing rows.
+  const { data: existing } = await supabase
+    .from("sitelinks_rows")
+    .select("sort_order")
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  let sort = (existing?.[0]?.sort_order ?? -1) + 1;
+
+  const payload = rows.map((r) => ({
+    project_id: projectId,
+    page_url: r.page_url || null,
+    sitelink_1: r.sitelink_1 || null,
+    sitelink_2: r.sitelink_2 || null,
+    sitelink_3: r.sitelink_3 || null,
+    sort_order: sort++,
+  }));
+
+  const { error } = await supabase.from("sitelinks_rows").insert(payload);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/sitelinks");
+  revalidatePath(`/dashboard/project/${projectId}/sitelinks`);
+  return { inserted: payload.length };
+}
+
 // ----- SEO daily log -------------------------------------------------------
 
 export async function addSeoLog(formData: FormData) {
