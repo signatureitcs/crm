@@ -7,6 +7,7 @@ import { clsx } from "@/lib/clsx";
 import { formatDate } from "@/lib/format";
 import {
   ROLE_LABELS,
+  type Comment,
   type Handoff,
   type Profile,
   type Project,
@@ -36,6 +37,7 @@ export default async function ManagerDashboardPage() {
     { data: members },
     { data: handoffs },
     { data: seoLogs },
+    { data: comments },
   ] = await Promise.all([
     supabase.from("projects").select("*, countries(name)").order("created_at", { ascending: false }),
     supabase.from("tasks").select("*"),
@@ -43,6 +45,7 @@ export default async function ManagerDashboardPage() {
     supabase.from("project_members").select("*"),
     supabase.from("handoffs").select("*").order("created_at", { ascending: false }).limit(10),
     supabase.from("seo_daily_logs").select("*").order("created_at", { ascending: false }).limit(10),
+    supabase.from("comments").select("*").order("created_at", { ascending: false }).limit(10),
   ]);
 
   const projectList = (projects as ProjectWithCountry[]) ?? [];
@@ -51,6 +54,7 @@ export default async function ManagerDashboardPage() {
   const memberList = (members as ProjectMember[]) ?? [];
   const handoffList = (handoffs as Handoff[]) ?? [];
   const logList = (seoLogs as SeoDailyLog[]) ?? [];
+  const commentList = (comments as Comment[]) ?? [];
 
   const profileById = new Map(people.map((p) => [p.id, p]));
   const projectById = new Map(projectList.map((p) => [p.id, p]));
@@ -106,6 +110,13 @@ export default async function ManagerDashboardPage() {
       text: `${l.author_id ? profileById.get(l.author_id)?.full_name ?? "Someone" : "Someone"} logged a note on ${
         projectById.get(l.project_id)?.name ?? "a project"
       }: ${l.note.slice(0, 60)}`,
+    })),
+    ...commentList.map((c) => ({
+      ts: c.created_at,
+      icon: "chat_bubble",
+      text: `${c.author_id ? profileById.get(c.author_id)?.full_name ?? "Someone" : "Someone"} commented on ${
+        projectById.get(c.project_id)?.name ?? "a project"
+      }: ${c.body.slice(0, 60)}`,
     })),
   ].sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 12);
 

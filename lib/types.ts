@@ -115,6 +115,16 @@ export interface SitelinkRow {
   sort_order: number;
 }
 
+export interface Comment {
+  id: string;
+  project_id: string;
+  task_id: string | null;
+  author_id: string | null;
+  body: string;
+  mentions: string[];
+  created_at: string;
+}
+
 export interface SeoDailyLog {
   id: string;
   project_id: string;

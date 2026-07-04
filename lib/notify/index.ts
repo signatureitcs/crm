@@ -92,6 +92,40 @@ export async function notifyHandoff(input: {
   ]);
 }
 
+export async function notifyComment(input: {
+  authorName: string;
+  projectName: string;
+  projectPath: string;
+  snippet: string;
+  memberIds: string[];
+  mentionIds: string[];
+}) {
+  const url = absoluteUrl(input.projectPath);
+  const mentionSet = new Set(input.mentionIds);
+  const recipients = new Set<string>([
+    ...input.memberIds,
+    ...input.mentionIds,
+  ]);
+
+  await Promise.all([
+    ...Array.from(recipients).map((id) =>
+      notifyUser(id, {
+        title: mentionSet.has(id)
+          ? `${input.authorName} mentioned you`
+          : `New note on ${input.projectName}`,
+        body: input.snippet,
+        url: input.projectPath,
+        kind: mentionSet.has(id) ? "mention" : "comment",
+      }),
+    ),
+    postToTeams({
+      title: "💬 New note",
+      text: `**${input.authorName}** on ${input.projectName}: ${input.snippet}`,
+      linkUrl: url,
+    }),
+  ]);
+}
+
 export async function notifyGmbLive(input: {
   projectName: string;
   projectPath: string;

@@ -17,6 +17,7 @@ export function ProjectTabs({
     { label: "Workspace", href: base },
     { label: "Assets", href: `${base}/assets` },
     { label: "Sitelinks", href: `${base}/sitelinks` },
+    { label: "Notes", href: `${base}/notes` },
     { label: "Search console", href: `${base}/search-console` },
     ...(isManager ? [{ label: "Settings", href: `${base}/settings` }] : []),
   ];

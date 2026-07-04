@@ -7,6 +7,7 @@ import {
   notifyTaskAssigned,
   notifyHandoff,
   notifyGmbLive,
+  notifyComment,
 } from "@/lib/notify";
 import { canAssignRole, type Role, type TaskStatus } from "@/lib/types";
 
@@ -369,6 +370,72 @@ export async function importSitelinkRows(
   revalidatePath("/dashboard/sitelinks");
   revalidatePath(`/dashboard/project/${projectId}/sitelinks`);
   return { inserted: payload.length };
+}
+
+// ----- Comments / project notes --------------------------------------------
+
+export async function addComment(input: {
+  projectId: string;
+  taskId?: string | null;
+  body: string;
+  mentions: string[];
+}) {
+  const body = input.body.trim();
+  if (!input.projectId || !body) return;
+  const { supabase, userId } = await getUser();
+
+  const { error } = await supabase.from("comments").insert({
+    project_id: input.projectId,
+    task_id: input.taskId ?? null,
+    author_id: userId,
+    body,
+    mentions: input.mentions,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/project/${input.projectId}/notes`);
+
+  // Notify the whole team + mentioned users.
+  try {
+    const [{ data: project }, { data: memberRows }, { data: author }] =
+      await Promise.all([
+        supabase
+          .from("projects")
+          .select("name, developer_id, designer_id, seo_id")
+          .eq("id", input.projectId)
+          .single(),
+        supabase
+          .from("project_members")
+          .select("profile_id")
+          .eq("project_id", input.projectId),
+        supabase.from("profiles").select("full_name").eq("id", userId).single(),
+      ]);
+
+    const memberIds = new Set<string>();
+    (memberRows ?? []).forEach((m) => memberIds.add(m.profile_id));
+    [project?.developer_id, project?.designer_id, project?.seo_id].forEach(
+      (id) => id && memberIds.add(id),
+    );
+    memberIds.delete(userId); // don't notify yourself
+    const mentionIds = input.mentions.filter((id) => id !== userId);
+
+    await notifyComment({
+      authorName: author?.full_name ?? "Someone",
+      projectName: project?.name ?? "a project",
+      projectPath: `/dashboard/project/${input.projectId}/notes`,
+      snippet: body.length > 120 ? body.slice(0, 117) + "…" : body,
+      memberIds: Array.from(memberIds),
+      mentionIds,
+    });
+  } catch (e) {
+    console.error("[notify] comment failed:", e);
+  }
+}
+
+export async function deleteComment(commentId: string, projectId: string) {
+  const { supabase } = await getUser();
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/project/${projectId}/notes`);
 }
 
 // ----- SEO daily log -------------------------------------------------------
