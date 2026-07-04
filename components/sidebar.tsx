@@ -152,7 +152,18 @@ export function Sidebar({
       </nav>
 
       <div className="space-y-0.5 border-t border-border p-3">
-        <SidebarFooterLink icon="settings" label="Settings" />
+        <Link
+          href="/dashboard/settings"
+          className={clsx(
+            "flex h-10 items-center gap-3 rounded-lg px-3 text-sm",
+            pathname === "/dashboard/settings"
+              ? "bg-status-todo-bg font-medium text-primary"
+              : "text-ink-muted hover:bg-surface-subtle",
+          )}
+        >
+          <Icon name="settings" size={20} />
+          <span>Settings</span>
+        </Link>
         <SidebarFooterLink icon="help" label="Support" />
       </div>
 
