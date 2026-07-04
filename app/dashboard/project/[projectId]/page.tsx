@@ -5,6 +5,7 @@ import { PhaseCard } from "@/components/phase-card";
 import { AssignToSeo } from "@/components/assign-to-seo";
 import { HandoffPanel } from "@/components/handoff-panel";
 import { SeoLog } from "@/components/seo-log";
+import { QaReviewPanel } from "@/components/qa-review-panel";
 import {
   ASSIGNABLE_ROLES,
   type ChecklistCompletion,
@@ -87,6 +88,7 @@ export default async function WorkspacePage({
   people.forEach((pr) => (profilesById[pr.id] = pr));
 
   const isManager = profile.role === "manager";
+  const isQa = profile.role === "qa";
 
   // Project team = explicit members + the phase leads. Task assignees are
   // restricted to team members whose role the current user may assign to.
@@ -145,6 +147,19 @@ export default async function WorkspacePage({
         </div>
       </div>
 
+      {/* QA review — visible to all; actionable by QA */}
+      {(isQa || (p.qa_status && p.qa_status !== "pending")) && (
+        <QaReviewPanel
+          projectId={p.id}
+          status={p.qa_status}
+          note={p.qa_note}
+          reviewerName={
+            p.qa_reviewer_id ? profilesById[p.qa_reviewer_id]?.full_name ?? null : null
+          }
+          isQa={isQa}
+        />
+      )}
+
       {/* Phase cards */}
       {PHASE_ORDER.map((name) => {
         const phase = phasesByName.get(name);
@@ -162,6 +177,7 @@ export default async function WorkspacePage({
               profilesById={profilesById}
               assignableTo={assignable}
               canEdit={canEdit}
+              canAddTask={canEdit || isQa}
               active={p.current_phase === name}
               footer={
                 isDev && canHandoff ? (

@@ -31,6 +31,7 @@ export function PhaseCard({
   profilesById,
   assignableTo,
   canEdit,
+  canAddTask,
   footer,
   active,
 }: {
@@ -39,9 +40,11 @@ export function PhaseCard({
   profilesById: Record<string, Profile>;
   assignableTo: Profile[];
   canEdit: boolean;
+  canAddTask?: boolean;
   footer?: React.ReactNode;
   active?: boolean;
 }) {
+  const showAdd = canAddTask ?? canEdit;
   const meta = PHASE_META[phase.phase_name];
   const badge = phaseBadge(phase.status);
   const assignee = phase.assigned_to ? profilesById[phase.assigned_to] : null;
@@ -91,7 +94,7 @@ export function PhaseCard({
                 ))}
               </div>
 
-              {canEdit && (
+              {showAdd && (
                 <div className="mt-1">
                   <AddTaskForm
                     projectId={phase.project_id}

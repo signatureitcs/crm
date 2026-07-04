@@ -56,7 +56,10 @@ export default async function NotesPage({
     author_name: c.author_id ? nameById.get(c.author_id) ?? "Unknown" : "Unknown",
   }));
 
-  const canPost = profile.role === "manager" || memberIds.has(profile.id);
+  const canPost =
+    profile.role === "manager" ||
+    profile.role === "qa" ||
+    memberIds.has(profile.id);
 
   return (
     <div className="mx-auto max-w-3xl">

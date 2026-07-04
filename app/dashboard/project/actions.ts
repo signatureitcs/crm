@@ -372,6 +372,60 @@ export async function importSitelinkRows(
   return { inserted: payload.length };
 }
 
+// ----- QA review -----------------------------------------------------------
+
+export async function qaSetReview(
+  projectId: string,
+  status: "approved" | "rejected" | "pending",
+  note: string,
+) {
+  const { supabase, userId } = await getUser();
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      qa_status: status,
+      qa_note: note.trim() || null,
+      qa_reviewer_id: userId,
+      qa_reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", projectId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/project/${projectId}`);
+
+  // Notify the team of the QA verdict.
+  try {
+    const [{ data: project }, { data: memberRows }, { data: reviewer }] =
+      await Promise.all([
+        supabase
+          .from("projects")
+          .select("name, developer_id, designer_id, seo_id")
+          .eq("id", projectId)
+          .single(),
+        supabase
+          .from("project_members")
+          .select("profile_id")
+          .eq("project_id", projectId),
+        supabase.from("profiles").select("full_name").eq("id", userId).single(),
+      ]);
+    const memberIds = new Set<string>();
+    (memberRows ?? []).forEach((m) => memberIds.add(m.profile_id));
+    [project?.developer_id, project?.designer_id, project?.seo_id].forEach(
+      (id) => id && memberIds.add(id),
+    );
+    memberIds.delete(userId);
+    await notifyComment({
+      authorName: reviewer?.full_name ?? "QA",
+      projectName: project?.name ?? "a project",
+      projectPath: `/dashboard/project/${projectId}`,
+      snippet: `QA ${status}${note.trim() ? `: ${note.trim()}` : ""}`,
+      memberIds: Array.from(memberIds),
+      mentionIds: [],
+    });
+  } catch (e) {
+    console.error("[notify] qa review failed:", e);
+  }
+}
+
 // ----- Comments / project notes --------------------------------------------
 
 export async function addComment(input: {
