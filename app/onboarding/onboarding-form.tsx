@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ROLE_LABELS, type Role } from "@/lib/types";
+import { ROLE_LABELS, SELF_SELECT_ROLES, type Role } from "@/lib/types";
 
 export function OnboardingForm({ email }: { email: string }) {
   const router = useRouter();
@@ -62,7 +62,7 @@ export function OnboardingForm({ email }: { email: string }) {
           value={role}
           onChange={(e) => setRole(e.target.value as Role)}
         >
-          {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
+          {SELF_SELECT_ROLES.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>

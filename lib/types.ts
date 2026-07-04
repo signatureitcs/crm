@@ -1,6 +1,14 @@
 // Shared domain types mirroring the Supabase schema.
 
-export type Role = "manager" | "developer" | "designer" | "seo" | "gmb";
+export type Role =
+  | "manager"
+  | "developer"
+  | "designer"
+  | "seo"
+  | "gmb"
+  | "qa"
+  | "super_admin";
+export type Presence = "online" | "offline";
 export type ChecklistRole = "developer" | "designer" | "seo";
 export type ProjectType = "website" | "gmb";
 export type ProjectPhase = "design" | "development" | "seo" | "complete";
@@ -14,6 +22,9 @@ export interface Profile {
   id: string;
   full_name: string;
   role: Role;
+  phone: string | null;
+  avatar_url: string | null;
+  presence: Presence;
   created_at: string;
 }
 
@@ -35,6 +46,10 @@ export interface Project {
   description: string | null;
   client_name: string | null;
   client_contact: string | null;
+  qa_status: "pending" | "approved" | "rejected" | null;
+  qa_reviewer_id: string | null;
+  qa_reviewed_at: string | null;
+  qa_note: string | null;
   created_at: string;
 }
 
@@ -149,17 +164,31 @@ export const ROLE_LABELS: Record<Role, string> = {
   designer: "Designer",
   seo: "SEO specialist",
   gmb: "GMB specialist",
+  qa: "QA",
+  super_admin: "Super admin",
 };
+
+// Roles a user can self-select at onboarding (QA + super admin are
+// manager-assigned only).
+export const SELF_SELECT_ROLES: Role[] = [
+  "manager",
+  "developer",
+  "designer",
+  "seo",
+  "gmb",
+];
 
 // Role-based task-assignment matrix (creator role -> roles they may assign to).
 // "—" on the diagonal in the spec is read as "own role allowed". Managers may
 // assign to anyone; designers may only assign to themselves (own role).
 export const ASSIGNABLE_ROLES: Record<Role, Role[]> = {
-  manager: ["manager", "developer", "designer", "seo", "gmb"],
+  manager: ["manager", "developer", "designer", "seo", "gmb", "qa"],
   developer: ["developer", "seo"],
   seo: ["seo", "developer"],
   designer: ["designer"],
   gmb: ["gmb"],
+  qa: ["developer", "designer", "seo", "qa"],
+  super_admin: [], // read-only observer
 };
 
 export function canAssignRole(creator: Role, target: Role): boolean {

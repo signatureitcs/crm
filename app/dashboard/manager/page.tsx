@@ -139,6 +139,55 @@ export default async function ManagerDashboardPage() {
         <Stat label="Done tasks" value={stats.completed} icon="task_alt" tone="done" />
       </div>
 
+      {/* Team status (presence) */}
+      <div className="mb-6">
+        <h3 className="mb-2 text-sm font-semibold">Team status</h3>
+        <div className="card flex flex-wrap gap-2 p-4">
+          {teamMembers.length === 0 && (
+            <p className="text-sm text-ink-subtle">No team members yet.</p>
+          )}
+          {teamMembers.map((u) => {
+            const online = u.presence === "online";
+            const processing = userStats.get(u.id)?.processing ?? 0;
+            const state = !online ? "offline" : processing > 0 ? "working" : "free";
+            const styles = {
+              working: "border-status-progress-text/30 bg-status-progress-bg text-status-progress-text",
+              free: "border-status-done-text/30 bg-status-done-bg text-status-done-text",
+              offline: "border-border bg-surface-subtle text-ink-subtle",
+            }[state];
+            const dot = {
+              working: "bg-status-progress-text",
+              free: "bg-status-done-text",
+              offline: "bg-ink-subtle",
+            }[state];
+            const labelText = {
+              working: "working",
+              free: "free",
+              offline: "offline",
+            }[state];
+            return (
+              <span
+                key={u.id}
+                className={clsx(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+                  styles,
+                )}
+                title={`${u.full_name} · ${ROLE_LABELS[u.role]} · ${labelText}`}
+              >
+                <span className={clsx("h-2 w-2 rounded-full", dot)} />
+                {u.full_name}
+                <span className="opacity-70">· {labelText}</span>
+              </span>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex gap-4 text-xs text-ink-subtle">
+          <Legend dot="bg-status-progress-text" label="Working (online + active task)" />
+          <Legend dot="bg-status-done-text" label="Free (online, no active task)" />
+          <Legend dot="bg-ink-subtle" label="Offline" />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Projects table */}
         <div className="lg:col-span-2">
@@ -289,6 +338,15 @@ function Stat({
       </div>
       <p className="text-2xl font-bold">{value}</p>
     </div>
+  );
+}
+
+function Legend({ dot, label }: { dot: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={clsx("h-2 w-2 rounded-full", dot)} />
+      {label}
+    </span>
   );
 }
 

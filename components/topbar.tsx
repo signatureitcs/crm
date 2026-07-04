@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { ROLE_LABELS, type Profile } from "@/lib/types";
 import { Icon } from "@/components/icon";
 import {
   NotificationBell,
   type NotificationItem,
 } from "@/components/notification-bell";
+import { PresenceToggle } from "@/components/presence-toggle";
+import { InstallButton } from "@/components/install-button";
 
 export function Topbar({
   profile,
@@ -26,16 +29,31 @@ export function Topbar({
       <div className="flex items-center gap-3">
         {title && <span className="text-base font-semibold">{title}</span>}
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <InstallButton />
+        <PresenceToggle presence={profile.presence} />
         <NotificationBell notifications={notifications} />
-        <div className="flex items-center gap-3 border-l border-border pl-4">
-          <div className="text-right leading-tight">
-            <p className="text-sm font-medium">{profile.full_name}</p>
-            <p className="text-xs text-ink-subtle">{ROLE_LABELS[profile.role]}</p>
-          </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
-            {initials}
-          </div>
+        <div className="flex items-center gap-3 border-l border-border pl-3">
+          <Link href="/dashboard/settings" className="flex items-center gap-3">
+            <div className="text-right leading-tight">
+              <p className="text-sm font-medium">{profile.full_name}</p>
+              <p className="text-xs text-ink-subtle">
+                {ROLE_LABELS[profile.role]}
+              </p>
+            </div>
+            {profile.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatar_url}
+                alt={profile.full_name}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+                {initials}
+              </div>
+            )}
+          </Link>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
