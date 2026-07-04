@@ -44,6 +44,14 @@ export function Sidebar({
 
       <nav className="flex-1 overflow-y-auto px-3">
         <div className="mb-3 space-y-0.5">
+          {isManager && (
+            <NavLink
+              href="/dashboard/manager"
+              icon="monitoring"
+              label="Manager dashboard"
+              pathname={pathname}
+            />
+          )}
           <NavLink href="/dashboard/overview" icon="dashboard" label="Overview" pathname={pathname} />
           <NavLink href="/dashboard/assets" icon="folder" label="Assets bucket" pathname={pathname} />
           <NavLink href="/dashboard/sitelinks" icon="table_rows" label="Sitelinks bucket" pathname={pathname} />
