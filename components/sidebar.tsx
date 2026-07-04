@@ -13,10 +13,12 @@ export function Sidebar({
   countries,
   projects,
   isManager,
+  isSuperAdmin,
 }: {
   countries: Country[];
   projects: Project[];
   isManager: boolean;
+  isSuperAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [addOpen, setAddOpen] = useState(false);
@@ -44,6 +46,14 @@ export function Sidebar({
 
       <nav className="flex-1 overflow-y-auto px-3">
         <div className="mb-3 space-y-0.5">
+          {isSuperAdmin && (
+            <NavLink
+              href="/dashboard/super-admin"
+              icon="visibility"
+              label="Super admin"
+              pathname={pathname}
+            />
+          )}
           {isManager && (
             <NavLink
               href="/dashboard/manager"

@@ -5,7 +5,8 @@ export default async function DashboardHome() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
 
-  // Managers land on the global dashboard; everyone else on their overview.
+  // Route each role to its home.
   if (profile.role === "manager") redirect("/dashboard/manager");
+  if (profile.role === "super_admin") redirect("/dashboard/super-admin");
   redirect("/dashboard/overview");
 }

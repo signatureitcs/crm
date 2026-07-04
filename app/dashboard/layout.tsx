@@ -36,6 +36,7 @@ export default async function DashboardLayout({
         countries={(countries as Country[]) ?? []}
         projects={(projects as Project[]) ?? []}
         isManager={profile.role === "manager"}
+        isSuperAdmin={profile.role === "super_admin"}
       />
       <div className="ml-[240px] flex min-h-screen flex-col">
         <Topbar profile={profile} notifications={notifications ?? []} />

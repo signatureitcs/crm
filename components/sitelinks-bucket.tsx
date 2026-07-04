@@ -19,13 +19,15 @@ export type BucketSitelink = {
 export function SitelinksBucket({
   rows,
   projects,
+  initialProject = "",
 }: {
   rows: BucketSitelink[];
   projects: { id: string; name: string }[];
+  initialProject?: string;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [filterProject, setFilterProject] = useState("");
+  const [filterProject, setFilterProject] = useState(initialProject);
   const [importProject, setImportProject] = useState("");
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);

@@ -2,7 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { SitelinksBucket, type BucketSitelink } from "@/components/sitelinks-bucket";
 
-export default async function SitelinksBucketPage() {
+export default async function SitelinksBucketPage({
+  searchParams,
+}: {
+  searchParams: { project?: string };
+}) {
   await requireProfile();
   const supabase = createClient();
 
@@ -27,6 +31,7 @@ export default async function SitelinksBucketPage() {
       <SitelinksBucket
         rows={(rows as BucketSitelink[]) ?? []}
         projects={(projects as { id: string; name: string }[]) ?? []}
+        initialProject={searchParams.project ?? ""}
       />
     </div>
   );
