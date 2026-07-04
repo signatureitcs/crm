@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "@/lib/clsx";
 
-export function ProjectTabs({ projectId }: { projectId: string }) {
+export function ProjectTabs({
+  projectId,
+  isManager,
+}: {
+  projectId: string;
+  isManager?: boolean;
+}) {
   const pathname = usePathname();
   const base = `/dashboard/project/${projectId}`;
   const tabs = [
@@ -12,6 +18,7 @@ export function ProjectTabs({ projectId }: { projectId: string }) {
     { label: "Assets", href: `${base}/assets` },
     { label: "Sitelinks", href: `${base}/sitelinks` },
     { label: "Search console", href: `${base}/search-console` },
+    ...(isManager ? [{ label: "Settings", href: `${base}/settings` }] : []),
   ];
 
   return (

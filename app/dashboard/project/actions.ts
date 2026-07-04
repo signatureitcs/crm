@@ -8,7 +8,7 @@ import {
   notifyHandoff,
   notifyGmbLive,
 } from "@/lib/notify";
-import type { TaskStatus } from "@/lib/types";
+import { canAssignRole, type Role, type TaskStatus } from "@/lib/types";
 
 function projectPath(projectType: string, projectId: string) {
   return projectType === "gmb"
@@ -34,6 +34,24 @@ export async function addTask(formData: FormData) {
   if (!projectId || !title) return;
 
   const { supabase, userId } = await getUser();
+
+  // Enforce the role-based assignment matrix server-side.
+  if (assignedTo) {
+    const [{ data: creator }, { data: assignee }] = await Promise.all([
+      supabase.from("profiles").select("role").eq("id", userId).single(),
+      supabase.from("profiles").select("role").eq("id", assignedTo).single(),
+    ]);
+    if (
+      creator &&
+      assignee &&
+      !canAssignRole(creator.role as Role, assignee.role as Role)
+    ) {
+      throw new Error(
+        "Your role is not allowed to assign tasks to this person's role.",
+      );
+    }
+  }
+
   const { error } = await supabase.from("tasks").insert({
     project_id: projectId,
     phase_id: phaseId,
@@ -136,7 +154,7 @@ export async function handoffToSeo(input: {
   seoPhaseId: string;
   seoProfileId: string;
 }) {
-  const { supabase } = await getUser();
+  const { supabase, userId } = await getUser();
   const { projectId, seoPhaseId, seoProfileId } = input;
 
   // Build the snapshot and verify every developer checklist item is checked.
@@ -186,13 +204,18 @@ export async function handoffToSeo(input: {
     if (pErr) throw new Error(pErr.message);
   }
 
-  // 3. Advance the project.
+  // 3. Make the SEO lead a project member (so they can see it) + advance.
+  await supabase.from("project_members").upsert(
+    { project_id: projectId, profile_id: seoProfileId, added_by: userId },
+    { onConflict: "project_id,profile_id" },
+  );
   const { error: prErr } = await supabase
     .from("projects")
-    .update({ current_phase: "seo" })
+    .update({ current_phase: "seo", seo_id: seoProfileId })
     .eq("id", projectId);
   if (prErr) throw new Error(prErr.message);
 
+  revalidatePath("/dashboard", "layout");
   revalidatePath(`/dashboard/project/${projectId}`);
 
   // Notify the SEO lead + team channel.

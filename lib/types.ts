@@ -32,6 +32,17 @@ export interface Project {
   developer_id: string | null;
   designer_id: string | null;
   seo_id: string | null;
+  description: string | null;
+  client_name: string | null;
+  client_contact: string | null;
+  created_at: string;
+}
+
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  profile_id: string;
+  added_by: string | null;
   created_at: string;
 }
 
@@ -125,3 +136,18 @@ export const ROLE_LABELS: Record<Role, string> = {
   seo: "SEO specialist",
   gmb: "GMB specialist",
 };
+
+// Role-based task-assignment matrix (creator role -> roles they may assign to).
+// "—" on the diagonal in the spec is read as "own role allowed". Managers may
+// assign to anyone; designers may only assign to themselves (own role).
+export const ASSIGNABLE_ROLES: Record<Role, Role[]> = {
+  manager: ["manager", "developer", "designer", "seo", "gmb"],
+  developer: ["developer", "seo"],
+  seo: ["seo", "developer"],
+  designer: ["designer"],
+  gmb: ["gmb"],
+};
+
+export function canAssignRole(creator: Role, target: Role): boolean {
+  return ASSIGNABLE_ROLES[creator].includes(target);
+}

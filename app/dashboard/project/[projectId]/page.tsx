@@ -5,15 +5,17 @@ import { PhaseCard } from "@/components/phase-card";
 import { AssignToSeo } from "@/components/assign-to-seo";
 import { HandoffPanel } from "@/components/handoff-panel";
 import { SeoLog } from "@/components/seo-log";
-import type {
-  ChecklistCompletion,
-  ChecklistTemplate,
-  Handoff,
-  Phase,
-  Profile,
-  Project,
-  SeoDailyLog,
-  Task,
+import {
+  ASSIGNABLE_ROLES,
+  type ChecklistCompletion,
+  type ChecklistTemplate,
+  type Handoff,
+  type Phase,
+  type Profile,
+  type Project,
+  type ProjectMember,
+  type SeoDailyLog,
+  type Task,
 } from "@/lib/types";
 
 const PHASE_ORDER = ["design", "development", "seo"] as const;
@@ -36,6 +38,7 @@ export default async function WorkspacePage({
     { data: completions },
     { data: handoffs },
     { data: seoLogs },
+    { data: memberRows },
   ] = await Promise.all([
     supabase.from("projects").select("*").eq("id", projectId).single(),
     supabase.from("phases").select("*").eq("project_id", projectId),
@@ -65,6 +68,10 @@ export default async function WorkspacePage({
       .select("*")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("project_members")
+      .select("profile_id")
+      .eq("project_id", projectId),
   ]);
 
   const p = project as Project;
@@ -79,10 +86,20 @@ export default async function WorkspacePage({
   const profilesById: Record<string, Profile> = {};
   people.forEach((pr) => (profilesById[pr.id] = pr));
 
-  const ownsProject = [p.developer_id, p.designer_id, p.seo_id].includes(
-    profile.id,
-  );
   const isManager = profile.role === "manager";
+
+  // Project team = explicit members + the phase leads. Task assignees are
+  // restricted to team members whose role the current user may assign to.
+  const memberIds = new Set<string>([
+    ...(((memberRows as ProjectMember[] | null) ?? []).map((m) => m.profile_id)),
+    ...([p.developer_id, p.designer_id, p.seo_id].filter(Boolean) as string[]),
+  ]);
+  const ownsProject = memberIds.has(profile.id);
+  const memberProfiles = people.filter((pr) => memberIds.has(pr.id));
+  const allowedRoles = ASSIGNABLE_ROLES[profile.role];
+  const assignable = memberProfiles.filter((pr) =>
+    allowedRoles.includes(pr.role),
+  );
 
   const phasesByName = new Map(phaseList.map((ph) => [ph.phase_name, ph]));
   const devPhase = phasesByName.get("development");
@@ -143,7 +160,7 @@ export default async function WorkspacePage({
               phase={phase}
               tasks={phaseTasks}
               profilesById={profilesById}
-              assignableTo={people}
+              assignableTo={assignable}
               canEdit={canEdit}
               active={p.current_phase === name}
               footer={

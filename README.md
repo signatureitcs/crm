@@ -40,10 +40,11 @@ supabase db push          # applies supabase/migrations/0001_init.sql
 psql "$DATABASE_URL" -f supabase/seed.sql   # or run seed.sql in the SQL editor
 ```
 
-…or simply paste `supabase/migrations/0001_init.sql` then `supabase/seed.sql`
-into the Supabase SQL editor and run them. This creates all tables, RLS
-policies, the `project-assets` storage bucket, and seeds the checklist
-templates + starter countries.
+…or simply paste each file in `supabase/migrations/` **in order**
+(`0001_init.sql` → `0002_notifications.sql` → `0003_membership.sql`) then
+`supabase/seed.sql` into the Supabase SQL editor and run them. This creates all
+tables, RLS policies, the `project-assets` storage bucket, and seeds the
+checklist templates + starter countries.
 
 ### 4. Run
 

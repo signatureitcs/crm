@@ -30,9 +30,12 @@ export async function addProject(formData: FormData) {
   const developerId = emptyToNull(formData.get("developer_id"));
   const designerId = emptyToNull(formData.get("designer_id"));
   const seoId = emptyToNull(formData.get("seo_id"));
+  const description = emptyToNull(formData.get("description"));
+  const clientName = emptyToNull(formData.get("client_name"));
+  const clientContact = emptyToNull(formData.get("client_contact"));
 
   if (!name || !countryId) return;
-  const { supabase } = await requireUserId();
+  const { supabase, userId } = await requireUserId();
 
   const { data: project, error } = await supabase
     .from("projects")
@@ -44,11 +47,30 @@ export async function addProject(formData: FormData) {
       developer_id: developerId,
       designer_id: designerId,
       seo_id: seoId,
+      description,
+      client_name: clientName,
+      client_contact: clientContact,
     })
     .select("id")
     .single();
 
   if (error) throw new Error(error.message);
+
+  // Seed the project team from the chosen leads so the project is visible to
+  // them (hide-until-assigned).
+  const leadIds = [developerId, designerId, seoId].filter(
+    (id): id is string => Boolean(id),
+  );
+  const uniqueLeads = Array.from(new Set(leadIds));
+  if (uniqueLeads.length > 0) {
+    await supabase.from("project_members").insert(
+      uniqueLeads.map((profileId) => ({
+        project_id: project.id,
+        profile_id: profileId,
+        added_by: userId,
+      })),
+    );
+  }
 
   if (projectType === "website") {
     const phaseRows: {
@@ -101,4 +123,56 @@ export async function addProject(formData: FormData) {
 function emptyToNull(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "").trim();
   return s.length ? s : null;
+}
+
+// ----- Team membership & project settings ----------------------------------
+
+export async function addProjectMember(projectId: string, profileId: string) {
+  const { supabase, userId } = await requireUserId();
+  const { error } = await supabase
+    .from("project_members")
+    .upsert(
+      { project_id: projectId, profile_id: profileId, added_by: userId },
+      { onConflict: "project_id,profile_id" },
+    );
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard", "layout");
+  revalidatePath(`/dashboard/project/${projectId}/settings`);
+}
+
+export async function removeProjectMember(projectId: string, profileId: string) {
+  const { supabase } = await requireUserId();
+  const { error } = await supabase
+    .from("project_members")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("profile_id", profileId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard", "layout");
+  revalidatePath(`/dashboard/project/${projectId}/settings`);
+}
+
+export async function updateProjectMeta(formData: FormData) {
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!projectId) return;
+  const { supabase } = await requireUserId();
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      description: emptyToNull(formData.get("description")),
+      client_name: emptyToNull(formData.get("client_name")),
+      client_contact: emptyToNull(formData.get("client_contact")),
+    })
+    .eq("id", projectId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/project/${projectId}/settings`);
+  revalidatePath(`/dashboard/project/${projectId}`);
+}
+
+export async function deleteProject(projectId: string, countryId: string | null) {
+  const { supabase } = await requireUserId();
+  const { error } = await supabase.from("projects").delete().eq("id", projectId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard", "layout");
+  redirect(countryId ? `/dashboard/${countryId}` : "/dashboard");
 }

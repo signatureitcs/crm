@@ -52,6 +52,39 @@ export function AddProjectButton({
           </div>
 
           <div>
+            <label className="label" htmlFor="description">
+              Description <span className="text-ink-subtle">(optional)</span>
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={2}
+              className="input h-auto py-2"
+              placeholder="Short summary of the project"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor="client_name">
+                Client name
+              </label>
+              <input id="client_name" name="client_name" className="input" />
+            </div>
+            <div>
+              <label className="label" htmlFor="client_contact">
+                Client contact
+              </label>
+              <input
+                id="client_contact"
+                name="client_contact"
+                className="input"
+                placeholder="Phone / email"
+              />
+            </div>
+          </div>
+
+          <div>
             <label className="label">Project type</label>
             <div className="grid grid-cols-2 gap-2">
               {(["website", "gmb"] as ProjectType[]).map((t) => (

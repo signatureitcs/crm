@@ -13,7 +13,7 @@ export default async function ProjectLayout({
   children: React.ReactNode;
   params: { projectId: string };
 }) {
-  await requireProfile();
+  const profile = await requireProfile();
   const supabase = createClient();
 
   const { data: project } = await supabase
@@ -62,7 +62,7 @@ export default async function ProjectLayout({
             Open kanban
           </Link>
         </div>
-        <ProjectTabs projectId={p.id} />
+        <ProjectTabs projectId={p.id} isManager={profile.role === "manager"} />
       </div>
       <div className="p-6">{children}</div>
     </div>
