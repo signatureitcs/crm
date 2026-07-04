@@ -126,12 +126,12 @@ export function UserManagement({
         <form
           action={async (fd) => {
             setError(null);
-            try {
-              await createUser(fd);
+            const res = await createUser(fd);
+            if (res.ok) {
               setOpen(false);
               router.refresh();
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "Failed to create user.");
+            } else {
+              setError(res.error ?? "Failed to create user.");
             }
           }}
           className="space-y-4"
