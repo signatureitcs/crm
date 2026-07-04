@@ -1,12 +1,18 @@
 import { ROLE_LABELS, type Profile } from "@/lib/types";
 import { Icon } from "@/components/icon";
+import {
+  NotificationBell,
+  type NotificationItem,
+} from "@/components/notification-bell";
 
 export function Topbar({
   profile,
   title,
+  notifications,
 }: {
   profile: Profile;
   title?: string;
+  notifications: NotificationItem[];
 }) {
   const initials = profile.full_name
     .split(" ")
@@ -21,10 +27,7 @@ export function Topbar({
         {title && <span className="text-base font-semibold">{title}</span>}
       </div>
       <div className="flex items-center gap-4">
-        <Icon
-          name="notifications"
-          className="cursor-pointer text-ink-subtle hover:text-primary"
-        />
+        <NotificationBell notifications={notifications} />
         <div className="flex items-center gap-3 border-l border-border pl-4">
           <div className="text-right leading-tight">
             <p className="text-sm font-medium">{profile.full_name}</p>

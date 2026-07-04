@@ -31,10 +31,15 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/auth");
+  // Auth pages and API routes (which self-authenticate, e.g. the cron job)
+  // are reachable without a session.
+  const isPublic =
+    path.startsWith("/login") ||
+    path.startsWith("/auth") ||
+    path.startsWith("/api");
 
-  // Unauthenticated users may only see auth routes.
-  if (!user && !isAuthRoute) {
+  // Unauthenticated users may only see public routes.
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -11,6 +11,21 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Project Hub",
   description: "Multi-country project and task management for digital agencies",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Project Hub",
+  appleWebApp: {
+    capable: true,
+    title: "Project Hub",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: "/icons/icon-192.svg",
+    apple: "/icons/icon-192.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#00696b",
 };
 
 export default function RootLayout({

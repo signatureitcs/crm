@@ -14,13 +14,21 @@ export default async function DashboardLayout({
   if (!profile) redirect("/onboarding");
 
   const supabase = createClient();
-  const [{ data: countries }, { data: projects }] = await Promise.all([
-    supabase.from("countries").select("*").order("name"),
-    supabase
-      .from("projects")
-      .select("id, name, country_id, project_type, current_phase, developer_id, designer_id, seo_id, created_at")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: countries }, { data: projects }, { data: notifications }] =
+    await Promise.all([
+      supabase.from("countries").select("*").order("name"),
+      supabase
+        .from("projects")
+        .select(
+          "id, name, country_id, project_type, current_phase, developer_id, designer_id, seo_id, created_at",
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("notifications")
+        .select("id, title, body, url, read, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,7 +38,7 @@ export default async function DashboardLayout({
         isManager={profile.role === "manager"}
       />
       <div className="ml-[240px] flex min-h-screen flex-col">
-        <Topbar profile={profile} />
+        <Topbar profile={profile} notifications={notifications ?? []} />
         <main className="flex-1">{children}</main>
       </div>
     </div>

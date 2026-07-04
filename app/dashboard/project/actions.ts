@@ -3,7 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  notifyTaskAssigned,
+  notifyHandoff,
+  notifyGmbLive,
+} from "@/lib/notify";
 import type { TaskStatus } from "@/lib/types";
+
+function projectPath(projectType: string, projectId: string) {
+  return projectType === "gmb"
+    ? `/dashboard/gmb/${projectId}`
+    : `/dashboard/project/${projectId}`;
+}
 
 async function getUser() {
   const supabase = createClient();
@@ -34,6 +45,27 @@ export async function addTask(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/project/${projectId}`);
+
+  // Notify the assignee (skip self-assignment).
+  if (assignedTo && assignedTo !== userId) {
+    try {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("name, project_type")
+        .eq("id", projectId)
+        .single();
+      if (project) {
+        await notifyTaskAssigned({
+          assigneeId: assignedTo,
+          taskTitle: title,
+          projectName: project.name,
+          projectPath: projectPath(project.project_type, projectId),
+        });
+      }
+    } catch (e) {
+      console.error("[notify] task assigned failed:", e);
+    }
+  }
 }
 
 export async function setTaskStatus(
@@ -162,6 +194,22 @@ export async function handoffToSeo(input: {
   if (prErr) throw new Error(prErr.message);
 
   revalidatePath(`/dashboard/project/${projectId}`);
+
+  // Notify the SEO lead + team channel.
+  try {
+    const [{ data: seo }, { data: project }] = await Promise.all([
+      supabase.from("profiles").select("full_name").eq("id", seoProfileId).single(),
+      supabase.from("projects").select("name").eq("id", projectId).single(),
+    ]);
+    await notifyHandoff({
+      seoId: seoProfileId,
+      seoName: seo?.full_name ?? "SEO lead",
+      projectName: project?.name ?? "Project",
+      projectPath: `/dashboard/project/${projectId}`,
+    });
+  } catch (e) {
+    console.error("[notify] handoff failed:", e);
+  }
 }
 
 // ----- Assets --------------------------------------------------------------
@@ -269,4 +317,22 @@ export async function saveListingLink(
     .eq("id", gmbTaskId);
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/gmb/${projectId}`);
+
+  // Notify managers + the team channel when a listing goes live.
+  if (link) {
+    try {
+      const [{ data: project }, { data: managers }] = await Promise.all([
+        supabase.from("projects").select("name").eq("id", projectId).single(),
+        supabase.from("profiles").select("id").eq("role", "manager"),
+      ]);
+      await notifyGmbLive({
+        projectName: project?.name ?? "Project",
+        projectPath: `/dashboard/gmb/${projectId}`,
+        link,
+        recipientIds: (managers ?? []).map((m) => m.id),
+      });
+    } catch (e) {
+      console.error("[notify] gmb live failed:", e);
+    }
+  }
 }
