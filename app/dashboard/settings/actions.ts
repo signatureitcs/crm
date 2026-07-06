@@ -32,9 +32,15 @@ function diagnoseServiceKey(): string | null {
   // New-style secret keys (sb_secret_…) aren't JWTs; skip the JWT checks.
   if (key.startsWith("sb_")) return null;
 
+  if (/\s/.test(key))
+    return "SUPABASE_SERVICE_ROLE_KEY contains a space or line break inside it — the value got wrapped/split on paste. Re-copy the whole key with the Copy button and paste it as one line.";
+
   const parts = key.split(".");
   if (parts.length !== 3)
     return "SUPABASE_SERVICE_ROLE_KEY doesn't look like a Supabase key. Copy the service_role secret from Supabase → Project Settings → API.";
+  // HS256 signature is ~43 base64url chars; much shorter means it was truncated.
+  if (parts[2].length < 40)
+    return "SUPABASE_SERVICE_ROLE_KEY looks truncated (its signature is cut off). Use the Copy button in Supabase and paste the entire key — it's long.";
   try {
     const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
     if (payload.role && payload.role !== "service_role") {
