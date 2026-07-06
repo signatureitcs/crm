@@ -16,12 +16,19 @@ const VALID_ROLES: Role[] = [
 
 // Inspects the configured service-role key and returns a precise problem
 // message, or null if it looks valid. Helps diagnose "Invalid API key".
+function urlRef(): string {
+  return (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")
+    .replace(/^https?:\/\//, "")
+    .split(".")[0];
+}
+
 function diagnoseServiceKey(): string | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   if (!key) return "SUPABASE_SERVICE_ROLE_KEY is not set.";
   if (key.trim() !== key)
-    return "SUPABASE_SERVICE_ROLE_KEY has leading/trailing whitespace — re-paste it cleanly.";
+    return "SUPABASE_SERVICE_ROLE_KEY has leading/trailing whitespace — re-paste it cleanly (no spaces or line breaks).";
+  if (/^["'].*["']$/.test(key))
+    return "SUPABASE_SERVICE_ROLE_KEY is wrapped in quotes — remove the surrounding quotes in Vercel.";
   // New-style secret keys (sb_secret_…) aren't JWTs; skip the JWT checks.
   if (key.startsWith("sb_")) return null;
 
@@ -29,20 +36,35 @@ function diagnoseServiceKey(): string | null {
   if (parts.length !== 3)
     return "SUPABASE_SERVICE_ROLE_KEY doesn't look like a Supabase key. Copy the service_role secret from Supabase → Project Settings → API.";
   try {
-    const payload = JSON.parse(
-      Buffer.from(parts[1], "base64").toString("utf8"),
-    );
+    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
     if (payload.role && payload.role !== "service_role") {
       return `SUPABASE_SERVICE_ROLE_KEY is a "${payload.role}" key, not the service_role secret. Copy the service_role key (Supabase → Project Settings → API → service_role).`;
     }
-    const urlRef = url.replace(/^https?:\/\//, "").split(".")[0];
-    if (payload.ref && urlRef && payload.ref !== urlRef) {
-      return `Project mismatch: the service key is for project "${payload.ref}" but NEXT_PUBLIC_SUPABASE_URL points to "${urlRef}". Both must be from the same project.`;
+    const ref = urlRef();
+    if (payload.ref && ref && payload.ref !== ref) {
+      return `Project mismatch: the service key is for project "${payload.ref}" but NEXT_PUBLIC_SUPABASE_URL points to "${ref}". Both must be from the same project.`;
     }
   } catch {
     /* couldn't decode — let the real API call report the error */
   }
   return null;
+}
+
+// Human-readable detail about the configured key vs URL, appended to
+// "Invalid API key" so the mismatch is obvious even when the format looks fine.
+function serviceKeyDetail(): string {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const ref = urlRef() || "(none)";
+  if (key.startsWith("sb_"))
+    return ` — using a new-style secret key; URL project is "${ref}".`;
+  try {
+    const payload = JSON.parse(
+      Buffer.from(key.split(".")[1] ?? "", "base64").toString("utf8"),
+    );
+    return ` — key role="${payload.role}", key project="${payload.ref}", URL project="${ref}". If these projects differ, or legacy JWT keys are disabled in Supabase, that's the cause.`;
+  } catch {
+    return ` — URL project="${ref}". The key isn't a decodable JWT; re-copy the service_role secret.`;
+  }
 }
 
 // Throws plain Errors (never redirect()) so callers can surface the reason.
@@ -118,7 +140,12 @@ export async function createUser(
         email_confirm: true,
         user_metadata: { full_name: fullName },
       });
-    if (createErr) return { ok: false, error: `Auth: ${createErr.message}` };
+    if (createErr) {
+      const suffix = /invalid api key/i.test(createErr.message)
+        ? serviceKeyDetail()
+        : "";
+      return { ok: false, error: `Auth: ${createErr.message}${suffix}` };
+    }
 
     const newId = created.user?.id;
     if (!newId) return { ok: false, error: "User was not created." };

@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     icon: "/icons/icon-192.svg",
     apple: "/icons/icon-192.svg",
   },
+  other: {
+    // Non-deprecated counterpart to apple-mobile-web-app-capable.
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
