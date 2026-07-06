@@ -18,6 +18,20 @@ import {
 
 type ProjectWithCountry = Project & { countries: { name: string } | null };
 
+function qaBadge(status: string | null | undefined): {
+  label: string;
+  className: string;
+} {
+  switch (status) {
+    case "approved":
+      return { label: "Approved", className: "bg-status-done-bg text-status-done-text" };
+    case "rejected":
+      return { label: "Needs fixes", className: "bg-status-error-bg text-status-error-text" };
+    default:
+      return { label: "Pending", className: "bg-status-todo-bg text-status-todo-text" };
+  }
+}
+
 const STAGE_STYLE: Record<string, string> = {
   design: "bg-status-progress-bg text-status-progress-text",
   development: "bg-status-progress-bg text-status-progress-text",
@@ -93,6 +107,8 @@ export default async function ManagerDashboardPage() {
     todo: taskList.filter((t) => t.status === "todo").length,
     processing: taskList.filter((t) => t.status === "processing").length,
     completed: taskList.filter((t) => t.status === "completed").length,
+    qaApproved: projectList.filter((p) => p.qa_status === "approved").length,
+    qaRejected: projectList.filter((p) => p.qa_status === "rejected").length,
   };
 
   // Recent activity feed (handoffs + SEO logs).
@@ -137,6 +153,8 @@ export default async function ManagerDashboardPage() {
         <Stat label="To do" value={stats.todo} icon="radio_button_unchecked" />
         <Stat label="In progress" value={stats.processing} icon="sync" tone="progress" />
         <Stat label="Done tasks" value={stats.completed} icon="task_alt" tone="done" />
+        <Stat label="QA approved" value={stats.qaApproved} icon="verified" tone="done" />
+        <Stat label="QA needs fixes" value={stats.qaRejected} icon="report" tone="error" />
       </div>
 
       {/* Team status (presence) */}
@@ -196,7 +214,7 @@ export default async function ManagerDashboardPage() {
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-surface-muted">
                 <tr>
-                  {["Project", "Country", "Stage", "Team", "Tasks (todo/doing/done)"].map((h) => (
+                  {["Project", "Country", "Stage", "QA", "Team", "Tasks (todo/doing/done)"].map((h) => (
                     <th key={h} className="border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">
                       {h}
                     </th>
@@ -224,6 +242,15 @@ export default async function ManagerDashboardPage() {
                           {p.project_type === "gmb" ? "GMB" : p.current_phase ?? "—"}
                         </span>
                       </td>
+                      <td className="px-3 py-2">
+                        {p.project_type === "gmb" ? (
+                          <span className="text-ink-subtle">—</span>
+                        ) : (
+                          <span className={clsx("badge", qaBadge(p.qa_status).className)}>
+                            {qaBadge(p.qa_status).label}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-ink-muted">
                         {memberNames.length ? memberNames.join(", ") : "—"}
                       </td>
@@ -237,7 +264,7 @@ export default async function ManagerDashboardPage() {
                 })}
                 {projectList.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-ink-subtle">
+                    <td colSpan={6} className="px-3 py-8 text-center text-ink-subtle">
                       No projects yet.
                     </td>
                   </tr>
@@ -326,10 +353,16 @@ function Stat({
   label: string;
   value: number;
   icon: string;
-  tone?: "progress" | "done";
+  tone?: "progress" | "done" | "error";
 }) {
   const toneClass =
-    tone === "done" ? "text-status-done-text" : tone === "progress" ? "text-status-progress-text" : "text-ink-subtle";
+    tone === "done"
+      ? "text-status-done-text"
+      : tone === "progress"
+        ? "text-status-progress-text"
+        : tone === "error"
+          ? "text-status-error-text"
+          : "text-ink-subtle";
   return (
     <div className="card p-4">
       <div className={clsx("mb-1 flex items-center gap-1.5", toneClass)}>
