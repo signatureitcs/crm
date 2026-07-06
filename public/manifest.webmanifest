@@ -1,6 +1,6 @@
 {
-  "name": "Project Hub",
-  "short_name": "Project Hub",
+  "name": "Signature CRM",
+  "short_name": "Signature CRM",
   "description": "Multi-country project and task management for digital agencies.",
   "start_url": "/dashboard",
   "scope": "/",

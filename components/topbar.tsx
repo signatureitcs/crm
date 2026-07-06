@@ -25,7 +25,7 @@ export function Topbar({
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-surface px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-surface pl-16 pr-3 md:px-6">
       <div className="flex items-center gap-3">
         {title && <span className="text-base font-semibold">{title}</span>}
       </div>
@@ -35,7 +35,7 @@ export function Topbar({
         <NotificationBell notifications={notifications} />
         <div className="flex items-center gap-3 border-l border-border pl-3">
           <Link href="/dashboard/settings" className="flex items-center gap-3">
-            <div className="text-right leading-tight">
+            <div className="hidden text-right leading-tight sm:block">
               <p className="text-sm font-medium">{profile.full_name}</p>
               <p className="text-xs text-ink-subtle">
                 {ROLE_LABELS[profile.role]}

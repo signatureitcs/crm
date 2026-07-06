@@ -19,10 +19,12 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   return (profile as Profile) ?? null;
 }
 
-// Like getCurrentProfile but redirects to /login when unauthenticated.
+// Like getCurrentProfile but redirects to /login when unauthenticated, and to
+// /pending when the account hasn't been approved by a manager yet.
 export async function requireProfile(): Promise<Profile> {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.approval_status !== "approved") redirect("/pending");
   return profile;
 }
 

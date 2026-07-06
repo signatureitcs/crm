@@ -1,4 +1,4 @@
-// Project Hub service worker: web push + notification clicks + install.
+// Signature CRM service worker: web push + notification clicks + install.
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -16,10 +16,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "Project Hub", body: event.data ? event.data.text() : "" };
+    data = { title: "Signature CRM", body: event.data ? event.data.text() : "" };
   }
 
-  const title = data.title || "Project Hub";
+  const title = data.title || "Signature CRM";
   const options = {
     body: data.body || "",
     icon: "/icons/icon-192.svg",

@@ -6,7 +6,11 @@ import { Icon } from "@/components/icon";
 import { Dialog } from "@/components/dialog";
 import { SubmitButton } from "@/components/submit-button";
 import { clsx } from "@/lib/clsx";
-import { setUserRole, createUser } from "@/app/dashboard/settings/actions";
+import {
+  setUserRole,
+  createUser,
+  setUserApproval,
+} from "@/app/dashboard/settings/actions";
 import { ROLE_LABELS, type Profile, type Role } from "@/lib/types";
 
 const ROLE_OPTIONS = Object.keys(ROLE_LABELS) as Role[];
@@ -36,8 +40,73 @@ export function UserManagement({
     });
   }
 
+  function approve(userId: string, status: "approved" | "rejected") {
+    setRowError(null);
+    startTransition(async () => {
+      const res = await setUserApproval(userId, status);
+      if (res.ok) {
+        router.refresh();
+      } else {
+        setRowError(res.error ?? "Failed to update approval.");
+      }
+    });
+  }
+
+  const pendingUsers = users.filter((u) => u.approval_status === "pending");
+
   return (
-    <div className="card">
+    <div className="space-y-4">
+      {pendingUsers.length > 0 && (
+        <div className="card border-status-progress-text/30 bg-status-progress-bg/30">
+          <div className="border-b border-border p-4">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Icon name="how_to_reg" size={18} className="text-status-progress-text" />
+              Pending approvals
+              <span className="badge bg-status-progress-bg text-status-progress-text">
+                {pendingUsers.length}
+              </span>
+            </h3>
+            <p className="text-sm text-ink-muted">
+              New sign-ups can&apos;t access the app until you approve them.
+            </p>
+          </div>
+          <div className="divide-y divide-border">
+            {pendingUsers.map((u) => (
+              <div
+                key={u.id}
+                className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-medium">{u.full_name}</p>
+                  <p className="text-xs text-ink-subtle">
+                    Requested role: {ROLE_LABELS[u.role]}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="btn-primary"
+                    disabled={pending}
+                    onClick={() => approve(u.id, "approved")}
+                  >
+                    <Icon name="check" size={16} />
+                    Approve
+                  </button>
+                  <button
+                    className="btn-secondary text-status-error-text"
+                    disabled={pending}
+                    onClick={() => approve(u.id, "rejected")}
+                  >
+                    <Icon name="close" size={16} />
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card">
       <div className="flex items-center justify-between border-b border-border p-4">
         <div>
           <h3 className="font-semibold">Team members</h3>
@@ -64,6 +133,7 @@ export function UserManagement({
               <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Name</th>
               <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Phone</th>
               <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Presence</th>
+              <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Status</th>
               <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Role</th>
             </tr>
           </thead>
@@ -95,6 +165,20 @@ export function UserManagement({
                       )}
                     />
                     {u.presence === "online" ? "Online" : "Offline"}
+                  </span>
+                </td>
+                <td className="px-4 py-2">
+                  <span
+                    className={clsx(
+                      "badge",
+                      u.approval_status === "approved"
+                        ? "bg-status-done-bg text-status-done-text"
+                        : u.approval_status === "pending"
+                          ? "bg-status-progress-bg text-status-progress-text"
+                          : "bg-status-error-bg text-status-error-text",
+                    )}
+                  >
+                    {u.approval_status}
                   </span>
                 </td>
                 <td className="px-4 py-2">
@@ -179,6 +263,7 @@ export function UserManagement({
           </div>
         </form>
       </Dialog>
+      </div>
     </div>
   );
 }

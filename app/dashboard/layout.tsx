@@ -12,6 +12,7 @@ export default async function DashboardLayout({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
+  if (profile.approval_status !== "approved") redirect("/pending");
 
   const supabase = createClient();
   const [{ data: countries }, { data: projects }, { data: notifications }] =
@@ -38,7 +39,7 @@ export default async function DashboardLayout({
         isManager={profile.role === "manager"}
         isSuperAdmin={profile.role === "super_admin"}
       />
-      <div className="ml-[240px] flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col md:ml-[240px]">
         <Topbar profile={profile} notifications={notifications ?? []} />
         <main className="flex-1">{children}</main>
       </div>

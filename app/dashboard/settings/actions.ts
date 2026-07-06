@@ -124,6 +124,28 @@ export async function setUserRole(
   }
 }
 
+export async function setUserApproval(
+  userId: string,
+  status: "approved" | "rejected",
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { supabase } = await requireManager();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ approval_status: status })
+      .eq("id", userId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    console.error("[setUserApproval]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to update approval.",
+    };
+  }
+}
+
 export async function createUser(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {

@@ -9,13 +9,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Project Hub",
+  title: "Signature CRM",
   description: "Multi-country project and task management for digital agencies",
   manifest: "/manifest.webmanifest",
-  applicationName: "Project Hub",
+  applicationName: "Signature CRM",
   appleWebApp: {
     capable: true,
-    title: "Project Hub",
+    title: "Signature CRM",
     statusBarStyle: "default",
   },
   icons: {

@@ -43,7 +43,7 @@ export async function postToTeams(input: {
             ? [
                 {
                   type: "Action.OpenUrl",
-                  title: input.linkText ?? "Open in Project Hub",
+                  title: input.linkText ?? "Open in Signature CRM",
                   url: input.linkUrl,
                 },
               ]

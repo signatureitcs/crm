@@ -21,7 +21,7 @@ export default async function OnboardingPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-primary">Project Hub</h1>
+          <h1 className="text-2xl font-bold text-primary">Signature CRM</h1>
           <p className="mt-1 text-sm text-ink-muted">One more step</p>
         </div>
         <div className="card p-6">

@@ -22,6 +22,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const [addOpen, setAddOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     // expand the country whose project is currently open
     const init: Record<string, boolean> = {};
@@ -36,12 +37,48 @@ export function Sidebar({
   }
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-full w-[240px] flex-col border-r border-border bg-surface">
-      <div className="p-6">
-        <Link href="/dashboard">
-          <h1 className="text-xl font-bold text-primary">Project Hub</h1>
-        </Link>
-        <p className="text-sm text-ink-muted">Agency dashboard</p>
+    <>
+      {/* Mobile hamburger */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-3 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-ink shadow-sm md:hidden"
+        aria-label="Open menu"
+      >
+        <Icon name="menu" />
+      </button>
+
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-ink/40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+    <aside
+      onClick={(e) => {
+        // Close the drawer when a navigation link is tapped (mobile).
+        if ((e.target as HTMLElement).closest("a")) setMobileOpen(false);
+      }}
+      className={clsx(
+        "fixed left-0 top-0 z-40 flex h-full w-[240px] flex-col border-r border-border bg-surface transition-transform md:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+      )}
+    >
+      <div className="flex items-start justify-between p-6 pr-4">
+        <div>
+          <Link href="/dashboard">
+            <h1 className="text-xl font-bold text-primary">Signature CRM</h1>
+          </Link>
+          <p className="text-sm text-ink-muted">Agency dashboard</p>
+        </div>
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="text-ink-subtle hover:text-ink md:hidden"
+          aria-label="Close menu"
+        >
+          <Icon name="close" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3">
@@ -212,6 +249,7 @@ export function Sidebar({
         </form>
       </Dialog>
     </aside>
+    </>
   );
 }
 
