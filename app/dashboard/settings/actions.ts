@@ -63,13 +63,16 @@ function serviceKeyDetail(): string {
   const ref = urlRef() || "(none)";
   if (key.startsWith("sb_"))
     return ` — using a new-style secret key; URL project is "${ref}".`;
+  // Length + last 6 chars reveal a truncated/wrong deployed value without
+  // leaking the secret (6 chars can't reconstruct the key).
+  const fp = ` [deployed key: length=${key.length}, ends "${key.slice(-6)}"]`;
   try {
     const payload = JSON.parse(
       Buffer.from(key.split(".")[1] ?? "", "base64").toString("utf8"),
     );
-    return ` — key role="${payload.role}", key project="${payload.ref}", URL project="${ref}". If these projects differ, or legacy JWT keys are disabled in Supabase, that's the cause.`;
+    return ` — key role="${payload.role}", key project="${payload.ref}", URL project="${ref}".${fp} If the length/ending don't match the real service_role key, Vercel is running a stale/truncated value — re-save it and redeploy.`;
   } catch {
-    return ` — URL project="${ref}". The key isn't a decodable JWT; re-copy the service_role secret.`;
+    return ` — URL project="${ref}".${fp} The key isn't a decodable JWT; re-copy the service_role secret.`;
   }
 }
 
