@@ -27,11 +27,11 @@ export function UserManagement({
   function changeRole(userId: string, role: Role) {
     setRowError(null);
     startTransition(async () => {
-      try {
-        await setUserRole(userId, role);
+      const res = await setUserRole(userId, role);
+      if (res.ok) {
         router.refresh();
-      } catch (e) {
-        setRowError(e instanceof Error ? e.message : "Failed to update role.");
+      } else {
+        setRowError(res.error ?? "Failed to update role.");
       }
     });
   }

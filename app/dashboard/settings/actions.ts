@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { Role } from "@/lib/types";
 
@@ -15,12 +14,13 @@ const VALID_ROLES: Role[] = [
   "super_admin",
 ];
 
+// Throws plain Errors (never redirect()) so callers can surface the reason.
 async function requireManager() {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) throw new Error("You must be signed in.");
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -32,19 +32,30 @@ async function requireManager() {
   return { supabase, userId: user.id };
 }
 
-export async function setUserRole(userId: string, role: Role) {
-  if (!VALID_ROLES.includes(role)) throw new Error("Invalid role.");
-  const { supabase, userId: me } = await requireManager();
-  if (userId === me && role !== "manager") {
-    throw new Error("You can't remove your own manager role.");
+export async function setUserRole(
+  userId: string,
+  role: Role,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    if (!VALID_ROLES.includes(role)) throw new Error("Invalid role.");
+    const { supabase, userId: me } = await requireManager();
+    if (userId === me && role !== "manager") {
+      throw new Error("You can't remove your own manager role.");
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role })
+      .eq("id", userId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    console.error("[setUserRole]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to update role.",
+    };
   }
-  const { error } = await supabase
-    .from("profiles")
-    .update({ role })
-    .eq("id", userId);
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard/settings");
-  revalidatePath("/dashboard/manager");
 }
 
 export async function createUser(
@@ -74,7 +85,7 @@ export async function createUser(
         email_confirm: true,
         user_metadata: { full_name: fullName },
       });
-    if (createErr) return { ok: false, error: createErr.message };
+    if (createErr) return { ok: false, error: `Auth: ${createErr.message}` };
 
     const newId = created.user?.id;
     if (!newId) return { ok: false, error: "User was not created." };
@@ -85,13 +96,15 @@ export async function createUser(
     if (profileErr) {
       // Roll back the auth user so the manager can retry cleanly.
       await admin.auth.admin.deleteUser(newId);
-      return { ok: false, error: profileErr.message };
+      return { ok: false, error: `Profile: ${profileErr.message}` };
     }
 
-    revalidatePath("/dashboard/settings");
-    revalidatePath("/dashboard/manager");
+    // NOTE: intentionally no revalidatePath() here — it forces a server
+    // re-render inside the action response, and any error on those pages would
+    // mask this result. The client calls router.refresh() instead.
     return { ok: true };
   } catch (e) {
+    console.error("[createUser]", e);
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Failed to create user.",
