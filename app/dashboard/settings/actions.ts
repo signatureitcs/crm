@@ -1,7 +1,8 @@
 "use server";
 
+import { createHash } from "crypto";
 import { revalidatePath } from "next/cache";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import type { Role } from "@/lib/types";
 
 const VALID_ROLES: Role[] = [
@@ -65,7 +66,10 @@ function serviceKeyDetail(): string {
     return ` — using a new-style secret key; URL project is "${ref}".`;
   // Length + last 6 chars reveal a truncated/wrong deployed value without
   // leaking the secret (6 chars can't reconstruct the key).
-  const fp = ` [deployed key: length=${key.length}, ends "${key.slice(-6)}"]`;
+  const sha12 = key
+    ? createHash("sha256").update(key).digest("hex").slice(0, 12)
+    : "none";
+  const fp = ` [deployed key: length=${key.length}, ends "${key.slice(-6)}", sha12=${sha12}]`;
   try {
     const payload = JSON.parse(
       Buffer.from(key.split(".")[1] ?? "", "base64").toString("utf8"),
@@ -141,36 +145,66 @@ export async function createUser(
     // Creating an auth account requires the service role (server-only).
     const diag = diagnoseServiceKey();
     if (diag) return { ok: false, error: diag };
-    const admin = createServiceClient();
-    const { data: created, error: createErr } =
-      await admin.auth.admin.createUser({
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const headers = {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    };
+
+    // 1) Create the auth user via the GoTrue admin endpoint (raw fetch so we
+    //    see the exact status + message instead of a wrapped one).
+    const authRes = await fetch(`${url}/auth/v1/admin/users`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
         email,
         password,
         email_confirm: true,
         user_metadata: { full_name: fullName },
-      });
-    if (createErr) {
-      const suffix = /invalid api key/i.test(createErr.message)
-        ? serviceKeyDetail()
-        : "";
-      return { ok: false, error: `Auth: ${createErr.message}${suffix}` };
+      }),
+    });
+    const authText = await authRes.text();
+    let authJson: Record<string, unknown> = {};
+    try {
+      authJson = JSON.parse(authText);
+    } catch {
+      /* non-JSON body */
+    }
+    if (!authRes.ok) {
+      const msg =
+        (authJson.msg as string) ||
+        (authJson.message as string) ||
+        (authJson.error_description as string) ||
+        authText.slice(0, 200);
+      const detail = /invalid api key/i.test(msg) ? serviceKeyDetail() : "";
+      return { ok: false, error: `Auth ${authRes.status}: ${msg}${detail}` };
     }
 
-    const newId = created.user?.id;
-    if (!newId) return { ok: false, error: "User was not created." };
+    const newId = authJson.id as string | undefined;
+    if (!newId) return { ok: false, error: "User created but no id returned." };
 
-    const { error: profileErr } = await admin
-      .from("profiles")
-      .insert({ id: newId, full_name: fullName, role });
-    if (profileErr) {
+    // 2) Insert the profile row via PostgREST.
+    const profRes = await fetch(`${url}/rest/v1/profiles`, {
+      method: "POST",
+      headers: { ...headers, Prefer: "return=minimal" },
+      body: JSON.stringify({ id: newId, full_name: fullName, role }),
+    });
+    if (!profRes.ok) {
+      const t = await profRes.text();
       // Roll back the auth user so the manager can retry cleanly.
-      await admin.auth.admin.deleteUser(newId);
-      return { ok: false, error: `Profile: ${profileErr.message}` };
+      await fetch(`${url}/auth/v1/admin/users/${newId}`, {
+        method: "DELETE",
+        headers,
+      });
+      return { ok: false, error: `Profile ${profRes.status}: ${t.slice(0, 200)}` };
     }
 
-    // NOTE: intentionally no revalidatePath() here — it forces a server
-    // re-render inside the action response, and any error on those pages would
-    // mask this result. The client calls router.refresh() instead.
+    // NOTE: no revalidatePath() here — it forces a server re-render inside the
+    // action response, and any error there would mask this result. The client
+    // calls router.refresh() instead.
     return { ok: true };
   } catch (e) {
     console.error("[createUser]", e);
