@@ -14,6 +14,37 @@ const VALID_ROLES: Role[] = [
   "super_admin",
 ];
 
+// Inspects the configured service-role key and returns a precise problem
+// message, or null if it looks valid. Helps diagnose "Invalid API key".
+function diagnoseServiceKey(): string | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  if (!key) return "SUPABASE_SERVICE_ROLE_KEY is not set.";
+  if (key.trim() !== key)
+    return "SUPABASE_SERVICE_ROLE_KEY has leading/trailing whitespace — re-paste it cleanly.";
+  // New-style secret keys (sb_secret_…) aren't JWTs; skip the JWT checks.
+  if (key.startsWith("sb_")) return null;
+
+  const parts = key.split(".");
+  if (parts.length !== 3)
+    return "SUPABASE_SERVICE_ROLE_KEY doesn't look like a Supabase key. Copy the service_role secret from Supabase → Project Settings → API.";
+  try {
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64").toString("utf8"),
+    );
+    if (payload.role && payload.role !== "service_role") {
+      return `SUPABASE_SERVICE_ROLE_KEY is a "${payload.role}" key, not the service_role secret. Copy the service_role key (Supabase → Project Settings → API → service_role).`;
+    }
+    const urlRef = url.replace(/^https?:\/\//, "").split(".")[0];
+    if (payload.ref && urlRef && payload.ref !== urlRef) {
+      return `Project mismatch: the service key is for project "${payload.ref}" but NEXT_PUBLIC_SUPABASE_URL points to "${urlRef}". Both must be from the same project.`;
+    }
+  } catch {
+    /* couldn't decode — let the real API call report the error */
+  }
+  return null;
+}
+
 // Throws plain Errors (never redirect()) so callers can surface the reason.
 async function requireManager() {
   const supabase = createClient();
@@ -77,6 +108,8 @@ export async function createUser(
     }
 
     // Creating an auth account requires the service role (server-only).
+    const diag = diagnoseServiceKey();
+    if (diag) return { ok: false, error: diag };
     const admin = createServiceClient();
     const { data: created, error: createErr } =
       await admin.auth.admin.createUser({
