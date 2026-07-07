@@ -139,7 +139,7 @@ export default async function ManagerDashboardPage() {
   const teamMembers = people.filter((p) => p.role !== "manager");
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold">Manager dashboard</h2>
         <p className="text-sm text-ink-muted">Everything happening across the agency.</p>

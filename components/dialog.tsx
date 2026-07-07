@@ -35,11 +35,11 @@ export function Dialog({
         onClick={onClose}
       />
       <div
-        className={`card relative w-full ${maxWidth} shadow-xl`}
+        className={`card relative flex max-h-[90vh] w-full flex-col ${maxWidth} shadow-xl`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-start justify-between border-b border-border p-4">
+        <div className="flex shrink-0 items-start justify-between border-b border-border p-4">
           <div>
             <h3 className="text-lg font-semibold">{title}</h3>
             {description && (
@@ -48,13 +48,13 @@ export function Dialog({
           </div>
           <button
             onClick={onClose}
-            className="text-ink-subtle hover:text-ink"
+            className="shrink-0 text-ink-subtle hover:text-ink"
             aria-label="Close"
           >
             <Icon name="close" />
           </button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="overflow-y-auto p-4">{children}</div>
       </div>
     </div>
   );

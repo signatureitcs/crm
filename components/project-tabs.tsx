@@ -23,7 +23,7 @@ export function ProjectTabs({
   ];
 
   return (
-    <nav className="flex gap-6">
+    <nav className="-mx-4 flex gap-5 overflow-x-auto px-4 md:mx-0 md:gap-6 md:px-0">
       {tabs.map((tab) => {
         const active =
           tab.href === base
@@ -34,7 +34,7 @@ export function ProjectTabs({
             key={tab.href}
             href={tab.href}
             className={clsx(
-              "flex h-12 items-center border-b-2 text-sm transition-colors",
+              "flex h-12 shrink-0 items-center whitespace-nowrap border-b-2 text-sm transition-colors",
               active
                 ? "border-primary font-medium text-primary"
                 : "border-transparent text-ink-muted hover:text-primary",

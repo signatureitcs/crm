@@ -42,7 +42,7 @@ export default async function GmbPage({
   const doneCount = tasks.filter((t) => t.status === "done").length;
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <div className="mb-2 flex items-center gap-1.5 text-xs text-ink-subtle">
           {country && (

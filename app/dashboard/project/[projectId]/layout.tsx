@@ -37,8 +37,8 @@ export default async function ProjectLayout({
 
   return (
     <div>
-      <div className="border-b border-border bg-surface px-6 pt-4">
-        <div className="mb-2 flex items-center justify-between">
+      <div className="border-b border-border bg-surface px-4 pt-4 md:px-6">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             {country && (
               <Link
@@ -64,7 +64,7 @@ export default async function ProjectLayout({
         </div>
         <ProjectTabs projectId={p.id} isManager={profile.role === "manager"} />
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-4 md:p-6">{children}</div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ export default async function OverviewPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold">My overview</h2>
         <p className="text-sm text-ink-muted">

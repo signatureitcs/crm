@@ -31,8 +31,8 @@ export default async function CountryPage({
   const people = (profiles as Profile[]) ?? [];
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-end justify-between">
+    <div className="p-4 md:p-6">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="mb-1 flex items-center gap-1.5 text-xs text-ink-subtle">
             <span>Countries</span>
@@ -46,7 +46,7 @@ export default async function CountryPage({
             {projectList.length} project{projectList.length === 1 ? "" : "s"}
           </p>
         </div>
-        {profile.role === "manager" && (
+        {profile.role !== "super_admin" && (
           <AddProjectButton
             countryId={params.countryId}
             developers={people.filter((p) => p.role === "developer")}
@@ -63,9 +63,9 @@ export default async function CountryPage({
           </div>
           <h3 className="font-semibold">No projects yet</h3>
           <p className="mt-1 text-sm text-ink-muted">
-            {profile.role === "manager"
-              ? "Add a project to start tracking phases and tasks."
-              : "No projects have been added to this country yet."}
+            {profile.role === "super_admin"
+              ? "No projects have been added to this country yet."
+              : "Add a project to start tracking phases and tasks."}
           </p>
         </div>
       ) : (

@@ -20,7 +20,7 @@ export default async function SitelinksBucketPage({
   ]);
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-4">
         <h2 className="text-xl font-semibold">Sitelinks bucket</h2>
         <p className="text-sm text-ink-muted">

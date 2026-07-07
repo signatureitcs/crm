@@ -56,15 +56,19 @@ export async function addProject(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
-  // Seed the project team from the chosen leads so the project is visible to
-  // them (hide-until-assigned).
-  const leadIds = [developerId, designerId, seoId].filter(
-    (id): id is string => Boolean(id),
+  // Seed the project team from the chosen leads AND the creator, so the
+  // project is visible to them (hide-until-assigned). Whoever creates a
+  // project always has access to it.
+  const memberIds = Array.from(
+    new Set(
+      [developerId, designerId, seoId, userId].filter(
+        (id): id is string => Boolean(id),
+      ),
+    ),
   );
-  const uniqueLeads = Array.from(new Set(leadIds));
-  if (uniqueLeads.length > 0) {
+  if (memberIds.length > 0) {
     await supabase.from("project_members").insert(
-      uniqueLeads.map((profileId) => ({
+      memberIds.map((profileId) => ({
         project_id: project.id,
         profile_id: profileId,
         added_by: userId,

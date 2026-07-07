@@ -64,7 +64,7 @@ export function InstallButton() {
         className="flex items-center gap-1.5 rounded-lg border border-primary px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary hover:text-on-primary"
       >
         <Icon name="download" size={16} />
-        Install app
+        <span className="hidden sm:inline">Install app</span>
       </button>
       {showIosHelp && (
         <div className="absolute right-0 top-9 z-50 w-60 rounded-lg border border-border bg-surface p-3 text-xs text-ink-muted shadow-lg">

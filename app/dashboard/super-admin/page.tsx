@@ -68,7 +68,7 @@ export default async function SuperAdminPage({
   const handoffList = (handoffs as Handoff[]) ?? [];
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6 flex items-center gap-2">
         <Icon name="visibility" className="text-primary" />
         <div>
