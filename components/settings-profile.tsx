@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Icon } from "@/components/icon";
 import { SubmitButton } from "@/components/submit-button";
 import { updateMyProfile } from "@/app/profile/actions";
-import { ROLE_LABELS, type Profile } from "@/lib/types";
+import { ROLE_LABELS, profileRoles, type Profile } from "@/lib/types";
 
 export function SettingsProfile({ profile }: { profile: Profile }) {
   const router = useRouter();
@@ -116,7 +116,7 @@ export function SettingsProfile({ profile }: { profile: Profile }) {
           <label className="label">Role</label>
           <input
             className="input bg-surface-subtle"
-            value={ROLE_LABELS[profile.role]}
+            value={profileRoles(profile).map((r) => ROLE_LABELS[r]).join(", ")}
             disabled
           />
           <p className="mt-1 text-xs text-ink-subtle">

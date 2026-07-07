@@ -5,7 +5,7 @@ import { requireProfile } from "@/lib/auth";
 import { Icon } from "@/components/icon";
 import { clsx } from "@/lib/clsx";
 import { formatDate } from "@/lib/format";
-import type { Handoff, Profile, Project, Task } from "@/lib/types";
+import { hasRole, type Handoff, type Profile, type Project, type Task } from "@/lib/types";
 
 type ProjectWithCountry = Project & { countries: { name: string } | null };
 
@@ -51,7 +51,7 @@ export default async function SuperAdminPage({
   const people = (profiles as Profile[]) ?? [];
   const profileById = new Map(people.map((p) => [p.id, p]));
   const projectById = new Map(projectList.map((p) => [p.id, p]));
-  const seoIds = new Set(people.filter((p) => p.role === "seo").map((p) => p.id));
+  const seoIds = new Set(people.filter((p) => hasRole(p, "seo")).map((p) => p.id));
 
   // SEO-owned tasks only, paginated server-side but filtered to SEO here.
   const allSeoTasks = ((seoTasks as Task[]) ?? []).filter(

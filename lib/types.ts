@@ -21,13 +21,25 @@ export type GmbTaskStatus = "todo" | "in_progress" | "done";
 export interface Profile {
   id: string;
   full_name: string;
-  role: Role;
+  role: Role; // primary role (kept in sync with roles[])
+  roles: Role[]; // full set of roles the user holds
   phone: string | null;
   avatar_url: string | null;
   presence: Presence;
   approval_status: "pending" | "approved" | "rejected";
   created_at: string;
 }
+
+// True if the profile holds the given role (falls back to primary role).
+export function hasRole(
+  profile: Pick<Profile, "role" | "roles">,
+  r: Role,
+): boolean {
+  return profile.roles?.length ? profile.roles.includes(r) : profile.role === r;
+}
+
+// Team roles a user may combine at sign-up (manager/super_admin are exclusive).
+export const MULTI_SELECT_ROLES: Role[] = ["developer", "designer", "seo", "gmb"];
 
 export interface Country {
   id: string;
@@ -194,4 +206,15 @@ export const ASSIGNABLE_ROLES: Record<Role, Role[]> = {
 
 export function canAssignRole(creator: Role, target: Role): boolean {
   return ASSIGNABLE_ROLES[creator].includes(target);
+}
+
+// Union of assignable target roles across all of a user's roles.
+export function assignableRolesFor(roles: Role[]): Role[] {
+  const set = new Set<Role>();
+  roles.forEach((r) => (ASSIGNABLE_ROLES[r] ?? []).forEach((x) => set.add(x)));
+  return Array.from(set);
+}
+
+export function profileRoles(p: Pick<Profile, "role" | "roles">): Role[] {
+  return p.roles?.length ? p.roles : [p.role];
 }

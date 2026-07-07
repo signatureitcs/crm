@@ -7,7 +7,9 @@ import { HandoffPanel } from "@/components/handoff-panel";
 import { SeoLog } from "@/components/seo-log";
 import { QaReviewPanel } from "@/components/qa-review-panel";
 import {
-  ASSIGNABLE_ROLES,
+  assignableRolesFor,
+  hasRole,
+  profileRoles,
   type ChecklistCompletion,
   type ChecklistTemplate,
   type Handoff,
@@ -98,9 +100,9 @@ export default async function WorkspacePage({
   ]);
   const ownsProject = memberIds.has(profile.id);
   const memberProfiles = people.filter((pr) => memberIds.has(pr.id));
-  const allowedRoles = ASSIGNABLE_ROLES[profile.role];
+  const allowedRoles = assignableRolesFor(profileRoles(profile));
   const assignable = memberProfiles.filter((pr) =>
-    allowedRoles.includes(pr.role),
+    profileRoles(pr).some((r) => allowedRoles.includes(r)),
   );
 
   const phasesByName = new Map(phaseList.map((ph) => [ph.phase_name, ph]));
@@ -124,7 +126,7 @@ export default async function WorkspacePage({
     devTemplates.length > 0 &&
     checklistItems.every((i) => i.completion?.checked);
 
-  const seoPeople = people.filter((pr) => pr.role === "seo");
+  const seoPeople = people.filter((pr) => hasRole(pr, "seo"));
   const canHandoff =
     !handoff &&
     (isManager || p.developer_id === profile.id) &&

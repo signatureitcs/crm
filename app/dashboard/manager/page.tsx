@@ -7,6 +7,7 @@ import { clsx } from "@/lib/clsx";
 import { formatDate } from "@/lib/format";
 import {
   ROLE_LABELS,
+  profileRoles,
   type Comment,
   type Handoff,
   type Profile,
@@ -190,7 +191,7 @@ export default async function ManagerDashboardPage() {
                   "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
                   styles,
                 )}
-                title={`${u.full_name} · ${ROLE_LABELS[u.role]} · ${labelText}`}
+                title={`${u.full_name} · ${profileRoles(u).map((r) => ROLE_LABELS[r]).join(", ")} · ${labelText}`}
               >
                 <span className={clsx("h-2 w-2 rounded-full", dot)} />
                 {u.full_name}
@@ -311,7 +312,7 @@ export default async function ManagerDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold">{u.full_name}</p>
-                    <p className="text-xs text-ink-subtle">{ROLE_LABELS[u.role]}</p>
+                    <p className="text-xs text-ink-subtle">{profileRoles(u).map((r) => ROLE_LABELS[r]).join(", ")}</p>
                   </div>
                 </div>
                 <div className="mb-3 flex gap-2 text-xs">

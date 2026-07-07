@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { Icon } from "@/components/icon";
 import { AddProjectButton } from "@/components/add-project-button";
-import type { Country, Profile, Project } from "@/lib/types";
+import { hasRole, type Country, type Profile, type Project } from "@/lib/types";
 
 export default async function CountryPage({
   params,
@@ -49,9 +49,9 @@ export default async function CountryPage({
         {profile.role !== "super_admin" && (
           <AddProjectButton
             countryId={params.countryId}
-            developers={people.filter((p) => p.role === "developer")}
-            designers={people.filter((p) => p.role === "designer")}
-            seos={people.filter((p) => p.role === "seo")}
+            developers={people.filter((p) => hasRole(p, "developer"))}
+            designers={people.filter((p) => hasRole(p, "designer"))}
+            seos={people.filter((p) => hasRole(p, "seo"))}
           />
         )}
       </div>

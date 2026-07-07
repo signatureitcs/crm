@@ -98,28 +98,35 @@ async function requireManager() {
   return { supabase, userId: user.id };
 }
 
-export async function setUserRole(
+export async function setUserRoles(
   userId: string,
-  role: Role,
+  roles: Role[],
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    if (!VALID_ROLES.includes(role)) throw new Error("Invalid role.");
+    const clean = roles.filter((r) => VALID_ROLES.includes(r));
+    if (clean.length === 0) throw new Error("Pick at least one role.");
+    // Manager and super admin are exclusive.
+    let finalRoles: Role[] = clean;
+    if (clean.includes("manager")) finalRoles = ["manager"];
+    else if (clean.includes("super_admin")) finalRoles = ["super_admin"];
+
     const { supabase, userId: me } = await requireManager();
-    if (userId === me && role !== "manager") {
+    if (userId === me && !finalRoles.includes("manager")) {
       throw new Error("You can't remove your own manager role.");
     }
     const { error } = await supabase
       .from("profiles")
-      .update({ role })
+      .update({ role: finalRoles[0], roles: finalRoles })
       .eq("id", userId);
     if (error) throw new Error(error.message);
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/manager");
     return { ok: true };
   } catch (e) {
-    console.error("[setUserRole]", e);
+    console.error("[setUserRoles]", e);
     return {
       ok: false,
-      error: e instanceof Error ? e.message : "Failed to update role.",
+      error: e instanceof Error ? e.message : "Failed to update roles.",
     };
   }
 }
@@ -155,12 +162,21 @@ export async function createUser(
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const fullName = String(formData.get("full_name") ?? "").trim();
-    const role = String(formData.get("role") ?? "") as Role;
 
-    if (!email || password.length < 6 || !fullName || !VALID_ROLES.includes(role)) {
+    const picked = (
+      formData.getAll("roles").length
+        ? (formData.getAll("roles") as string[])
+        : [String(formData.get("role") ?? "")]
+    ).filter((r): r is Role => VALID_ROLES.includes(r as Role));
+    let roles: Role[] = picked;
+    if (picked.includes("manager")) roles = ["manager"];
+    else if (picked.includes("super_admin")) roles = ["super_admin"];
+
+    if (!email || password.length < 6 || !fullName || roles.length === 0) {
       return {
         ok: false,
-        error: "Fill in email, a 6+ char password, name, and a valid role.",
+        error:
+          "Fill in email, a 6+ char password, name, and at least one role.",
       };
     }
 
@@ -212,7 +228,12 @@ export async function createUser(
     const profRes = await fetch(`${url}/rest/v1/profiles`, {
       method: "POST",
       headers: { ...headers, Prefer: "return=minimal" },
-      body: JSON.stringify({ id: newId, full_name: fullName, role }),
+      body: JSON.stringify({
+        id: newId,
+        full_name: fullName,
+        role: roles[0],
+        roles,
+      }),
     });
     if (!profRes.ok) {
       const t = await profRes.text();

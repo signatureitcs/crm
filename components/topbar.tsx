@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ROLE_LABELS, type Profile } from "@/lib/types";
+import { ROLE_LABELS, profileRoles, type Profile } from "@/lib/types";
 import { Icon } from "@/components/icon";
 import {
   NotificationBell,
@@ -38,7 +38,7 @@ export function Topbar({
             <div className="hidden text-right leading-tight sm:block">
               <p className="text-sm font-medium">{profile.full_name}</p>
               <p className="text-xs text-ink-subtle">
-                {ROLE_LABELS[profile.role]}
+                {profileRoles(profile).map((r) => ROLE_LABELS[r]).join(", ")}
               </p>
             </div>
             {profile.avatar_url ? (
