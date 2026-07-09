@@ -133,10 +133,13 @@ export async function setUserRoles(
 
 export async function setUserApproval(
   userId: string,
-  status: "approved" | "rejected",
+  status: "approved" | "rejected" | "suspended",
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const { supabase } = await requireManager();
+    const { supabase, userId: me } = await requireManager();
+    if (userId === me && status !== "approved") {
+      throw new Error("You can't suspend your own account.");
+    }
     const { error } = await supabase
       .from("profiles")
       .update({ approval_status: status })
@@ -149,6 +152,42 @@ export async function setUserApproval(
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Failed to update approval.",
+    };
+  }
+}
+
+// Permanently delete a user (auth account + profile cascade).
+export async function deleteUser(
+  userId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { userId: me } = await requireManager();
+    if (userId === me) {
+      return { ok: false, error: "You can't delete your own account." };
+    }
+    const diag = diagnoseServiceKey();
+    if (diag) return { ok: false, error: diag };
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const res = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      return { ok: false, error: `Delete ${res.status}: ${t.slice(0, 200)}` };
+    }
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    console.error("[deleteUser]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to delete user.",
     };
   }
 }

@@ -26,7 +26,7 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   presence: Presence;
-  approval_status: "pending" | "approved" | "rejected";
+  approval_status: "pending" | "approved" | "rejected" | "suspended";
   created_at: string;
 }
 

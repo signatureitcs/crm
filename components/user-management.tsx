@@ -10,6 +10,7 @@ import {
   setUserRoles,
   createUser,
   setUserApproval,
+  deleteUser,
 } from "@/app/dashboard/settings/actions";
 import { ROLE_LABELS, profileRoles, type Profile, type Role } from "@/lib/types";
 
@@ -37,12 +38,30 @@ export function UserManagement({
     });
   }
 
-  function approve(userId: string, status: "approved" | "rejected") {
+  function approve(
+    userId: string,
+    status: "approved" | "rejected" | "suspended",
+  ) {
     setRowError(null);
     startTransition(async () => {
       const res = await setUserApproval(userId, status);
       if (res.ok) router.refresh();
       else setRowError(res.error ?? "Failed to update approval.");
+    });
+  }
+
+  function remove(userId: string, name: string) {
+    if (
+      !window.confirm(
+        `Permanently delete ${name}? This removes their account and unassigns their work. This can't be undone.`,
+      )
+    )
+      return;
+    setRowError(null);
+    startTransition(async () => {
+      const res = await deleteUser(userId);
+      if (res.ok) router.refresh();
+      else setRowError(res.error ?? "Failed to delete user.");
     });
   }
 
@@ -129,6 +148,7 @@ export function UserManagement({
                 <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Presence</th>
                 <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Status</th>
                 <th className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Roles</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-ink-subtle">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -177,6 +197,46 @@ export function UserManagement({
                       disabled={pending}
                       onChange={(roles) => changeRoles(u.id, roles)}
                     />
+                  </td>
+                  <td className="px-4 py-2">
+                    {u.id === currentUserId ? (
+                      <span className="block text-right text-xs text-ink-subtle">
+                        —
+                      </span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1">
+                        {u.approval_status === "suspended" ? (
+                          <button
+                            className="rounded-lg px-2 py-1 text-xs font-medium text-status-done-text hover:bg-surface-subtle"
+                            disabled={pending}
+                            onClick={() => approve(u.id, "approved")}
+                            title="Reactivate account"
+                          >
+                            Reactivate
+                          </button>
+                        ) : (
+                          u.approval_status === "approved" && (
+                            <button
+                              className="rounded-lg px-2 py-1 text-xs font-medium text-ink-muted hover:bg-surface-subtle"
+                              disabled={pending}
+                              onClick={() => approve(u.id, "suspended")}
+                              title="Suspend account (blocks access)"
+                            >
+                              Suspend
+                            </button>
+                          )
+                        )}
+                        <button
+                          className="rounded-lg p-1 text-ink-subtle hover:bg-status-error-bg hover:text-status-error-text"
+                          disabled={pending}
+                          onClick={() => remove(u.id, u.full_name)}
+                          aria-label="Delete user"
+                          title="Delete user"
+                        >
+                          <Icon name="delete" size={16} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
