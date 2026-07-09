@@ -372,6 +372,76 @@ export async function importSitelinkRows(
   return { inserted: payload.length };
 }
 
+// ----- Dynamic sitelink sheet (columns + cells come from the data/CSV) ------
+
+export async function setSitelinkColumns(projectId: string, columns: string[]) {
+  const clean = columns.map((c) => c.trim()).filter(Boolean);
+  const { supabase } = await getUser();
+  const { error } = await supabase
+    .from("projects")
+    .update({ sitelink_columns: clean.length ? clean : ["Page URL"] })
+    .eq("id", projectId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/project/${projectId}/sitelinks`);
+}
+
+export async function updateSitelinkCells(
+  rowId: string,
+  cells: Record<string, string>,
+) {
+  const { supabase } = await getUser();
+  const { error } = await supabase
+    .from("sitelinks_rows")
+    .update({ cells })
+    .eq("id", rowId);
+  if (error) throw new Error(error.message);
+}
+
+// Import a CSV: its header row becomes the columns; each data row becomes a
+// sitelink row (stored as cells keyed by header).
+export async function importSitelinksDynamic(
+  projectId: string,
+  columns: string[],
+  rows: Record<string, string>[],
+) {
+  if (!projectId || columns.length === 0) return { inserted: 0 };
+  const { supabase } = await getUser();
+
+  // Adopt the CSV's headers as this project's columns.
+  const { error: colErr } = await supabase
+    .from("projects")
+    .update({ sitelink_columns: columns })
+    .eq("id", projectId);
+  if (colErr) throw new Error(colErr.message);
+
+  const { data: existing } = await supabase
+    .from("sitelinks_rows")
+    .select("sort_order")
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  let sort = (existing?.[0]?.sort_order ?? -1) + 1;
+
+  // Also mirror the first up-to-4 columns into the legacy fields so the older
+  // global bucket view keeps showing data.
+  const payload = rows.map((cells) => ({
+    project_id: projectId,
+    cells,
+    page_url: cells[columns[0]] || null,
+    sitelink_1: columns[1] ? cells[columns[1]] || null : null,
+    sitelink_2: columns[2] ? cells[columns[2]] || null : null,
+    sitelink_3: columns[3] ? cells[columns[3]] || null : null,
+    sort_order: sort++,
+  }));
+
+  const { error } = await supabase.from("sitelinks_rows").insert(payload);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/dashboard/project/${projectId}/sitelinks`);
+  revalidatePath("/dashboard/sitelinks");
+  return { inserted: payload.length };
+}
+
 // ----- QA review -----------------------------------------------------------
 
 export async function qaSetReview(

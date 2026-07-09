@@ -63,6 +63,7 @@ export interface Project {
   qa_reviewer_id: string | null;
   qa_reviewed_at: string | null;
   qa_note: string | null;
+  sitelink_columns: string[];
   created_at: string;
 }
 
@@ -140,6 +141,7 @@ export interface SitelinkRow {
   sitelink_1: string | null;
   sitelink_2: string | null;
   sitelink_3: string | null;
+  cells: Record<string, string | null>;
   sort_order: number;
 }
 
