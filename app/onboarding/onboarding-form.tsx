@@ -10,9 +10,9 @@ export function OnboardingForm({ email }: { email: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [fullName, setFullName] = useState("");
-  // Team members can hold several roles; manager is exclusive.
+  // Self-registration offers team roles only; manager/super admin are
+  // assigned by a manager afterwards.
   const [roles, setRoles] = useState<Role[]>(["developer"]);
-  const [isManager, setIsManager] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +26,7 @@ export function OnboardingForm({ email }: { email: string }) {
     e.preventDefault();
     setError(null);
 
-    const finalRoles: Role[] = isManager ? ["manager"] : roles;
+    const finalRoles: Role[] = roles;
     if (finalRoles.length === 0) {
       setError("Pick at least one role.");
       return;
@@ -79,48 +79,31 @@ export function OnboardingForm({ email }: { email: string }) {
             <button
               type="button"
               key={r}
-              disabled={isManager}
               onClick={() => toggleRole(r)}
               className={clsx(
                 "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-                isManager
-                  ? "cursor-not-allowed border-border text-ink-subtle opacity-50"
-                  : roles.includes(r)
-                    ? "border-primary bg-primary-soft font-medium text-primary"
-                    : "border-border text-ink-muted hover:border-primary",
+                roles.includes(r)
+                  ? "border-primary bg-primary-soft font-medium text-primary"
+                  : "border-border text-ink-muted hover:border-primary",
               )}
             >
               <span
                 className={clsx(
                   "material-symbols-outlined text-[18px]",
-                  roles.includes(r) && !isManager
-                    ? "text-primary"
-                    : "text-ink-subtle",
+                  roles.includes(r) ? "text-primary" : "text-ink-subtle",
                 )}
               >
-                {roles.includes(r) && !isManager
-                  ? "check_box"
-                  : "check_box_outline_blank"}
+                {roles.includes(r) ? "check_box" : "check_box_outline_blank"}
               </span>
               {ROLE_LABELS[r]}
             </button>
           ))}
         </div>
         <p className="mt-1.5 text-xs text-ink-subtle">
-          Pick every hat you wear. QA and super admin are assigned by a manager.
+          Pick every hat you wear. Manager, QA and super admin are assigned by a
+          manager.
         </p>
       </div>
-
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-3 text-sm">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-ink-subtle text-primary focus:ring-primary"
-          checked={isManager}
-          onChange={(e) => setIsManager(e.target.checked)}
-        />
-        <span className="font-medium">I&apos;m a manager</span>
-        <span className="text-xs text-ink-subtle">(exclusive role)</span>
-      </label>
 
       {error && (
         <p className="rounded-lg bg-status-error-bg px-3 py-2 text-sm text-status-error-text">
