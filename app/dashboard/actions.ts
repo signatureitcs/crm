@@ -23,105 +23,106 @@ export async function addCountry(formData: FormData) {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function addProject(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const countryId = String(formData.get("country_id") ?? "");
-  const projectType = String(formData.get("project_type") ?? "website") as ProjectType;
-  const developerId = emptyToNull(formData.get("developer_id"));
-  const designerId = emptyToNull(formData.get("designer_id"));
-  const seoId = emptyToNull(formData.get("seo_id"));
-  const description = emptyToNull(formData.get("description"));
-  const clientName = emptyToNull(formData.get("client_name"));
-  const clientContact = emptyToNull(formData.get("client_contact"));
+export async function addProject(
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string; redirectTo?: string }> {
+  try {
+    const name = String(formData.get("name") ?? "").trim();
+    const countryId = String(formData.get("country_id") ?? "");
+    const projectType = String(
+      formData.get("project_type") ?? "website",
+    ) as ProjectType;
+    const developerId = emptyToNull(formData.get("developer_id"));
+    const designerId = emptyToNull(formData.get("designer_id"));
+    const seoId = emptyToNull(formData.get("seo_id"));
+    const description = emptyToNull(formData.get("description"));
+    const clientName = emptyToNull(formData.get("client_name"));
+    const clientContact = emptyToNull(formData.get("client_contact"));
 
-  if (!name || !countryId) return;
-  const { supabase, userId } = await requireUserId();
+    if (!name || !countryId) {
+      return { ok: false, error: "Project name and country are required." };
+    }
+    const { supabase, userId } = await requireUserId();
 
-  const { data: project, error } = await supabase
-    .from("projects")
-    .insert({
-      name,
-      country_id: countryId,
-      project_type: projectType,
-      current_phase: projectType === "website" ? "development" : null,
-      developer_id: developerId,
-      designer_id: designerId,
-      seo_id: seoId,
-      description,
-      client_name: clientName,
-      client_contact: clientContact,
-    })
-    .select("id")
-    .single();
+    const { data: project, error } = await supabase
+      .from("projects")
+      .insert({
+        name,
+        country_id: countryId,
+        project_type: projectType,
+        current_phase: projectType === "website" ? "development" : null,
+        developer_id: developerId,
+        designer_id: designerId,
+        seo_id: seoId,
+        description,
+        client_name: clientName,
+        client_contact: clientContact,
+      })
+      .select("id")
+      .single();
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      return {
+        ok: false,
+        error: `Could not create project: ${error.message}. If you're not a manager, make sure migration 0009 (open creation) has been applied.`,
+      };
+    }
 
-  // Seed the project team from the chosen leads AND the creator, so the
-  // project is visible to them (hide-until-assigned). Whoever creates a
-  // project always has access to it.
-  const memberIds = Array.from(
-    new Set(
-      [developerId, designerId, seoId, userId].filter(
-        (id): id is string => Boolean(id),
+    // Seed the team from the chosen leads AND the creator so the project is
+    // visible to them (hide-until-assigned).
+    const memberIds = Array.from(
+      new Set(
+        [developerId, designerId, seoId, userId].filter(
+          (id): id is string => Boolean(id),
+        ),
       ),
-    ),
-  );
-  if (memberIds.length > 0) {
-    await supabase.from("project_members").insert(
-      memberIds.map((profileId) => ({
-        project_id: project.id,
-        profile_id: profileId,
-        added_by: userId,
-      })),
     );
-  }
+    if (memberIds.length > 0) {
+      const { error: mErr } = await supabase.from("project_members").insert(
+        memberIds.map((profileId) => ({
+          project_id: project.id,
+          profile_id: profileId,
+          added_by: userId,
+        })),
+      );
+      if (mErr) return { ok: false, error: `Team setup failed: ${mErr.message}` };
+    }
 
-  if (projectType === "website") {
-    const phaseRows: {
-      project_id: string;
-      phase_name: PhaseName;
-      status: string;
-      assigned_to: string | null;
-    }[] = [
-      {
+    if (projectType === "website") {
+      const phaseRows = [
+        { phase_name: "design" as PhaseName, status: "in_progress", assigned_to: designerId },
+        { phase_name: "development" as PhaseName, status: "in_progress", assigned_to: developerId },
+        { phase_name: "seo" as PhaseName, status: "locked", assigned_to: seoId },
+      ].map((r) => ({ ...r, project_id: project.id }));
+      const { error: pErr } = await supabase.from("phases").insert(phaseRows);
+      if (pErr) return { ok: false, error: `Phase setup failed: ${pErr.message}` };
+    } else {
+      const gmbRows = (
+        ["emails_assigned", "reviews_done", "listing_live"] as const
+      ).map((task_type) => ({
         project_id: project.id,
-        phase_name: "design",
-        status: "in_progress",
-        assigned_to: designerId,
-      },
-      {
-        project_id: project.id,
-        phase_name: "development",
-        status: "in_progress",
-        assigned_to: developerId,
-      },
-      {
-        project_id: project.id,
-        phase_name: "seo",
-        status: "locked",
-        assigned_to: seoId,
-      },
-    ];
-    const { error: pErr } = await supabase.from("phases").insert(phaseRows);
-    if (pErr) throw new Error(pErr.message);
-  } else {
-    const gmbRows = (
-      ["emails_assigned", "reviews_done", "listing_live"] as const
-    ).map((task_type) => ({
-      project_id: project.id,
-      task_type,
-      status: "todo" as const,
-    }));
-    const { error: gErr } = await supabase.from("gmb_tasks").insert(gmbRows);
-    if (gErr) throw new Error(gErr.message);
-  }
+        task_type,
+        status: "todo" as const,
+      }));
+      const { error: gErr } = await supabase.from("gmb_tasks").insert(gmbRows);
+      if (gErr) return { ok: false, error: `GMB setup failed: ${gErr.message}` };
+    }
 
-  revalidatePath("/dashboard", "layout");
-  redirect(
-    projectType === "website"
-      ? `/dashboard/project/${project.id}`
-      : `/dashboard/gmb/${project.id}`,
-  );
+    revalidatePath("/dashboard", "layout");
+    return {
+      ok: true,
+      redirectTo:
+        projectType === "website"
+          ? `/dashboard/project/${project.id}`
+          : `/dashboard/gmb/${project.id}`,
+    };
+  } catch (e) {
+    console.error("[addProject]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to create project.",
+    };
+  }
 }
 
 function emptyToNull(v: FormDataEntryValue | null): string | null {

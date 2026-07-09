@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { Dialog } from "@/components/dialog";
 import { SubmitButton } from "@/components/submit-button";
@@ -18,8 +19,10 @@ export function AddProjectButton({
   designers: Profile[];
   seos: Profile[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<ProjectType>("website");
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <>
@@ -34,7 +37,20 @@ export function AddProjectButton({
         title="Add project"
         description="Create a website or GMB project in this country."
       >
-        <form action={addProject} className="space-y-4">
+        <form
+          action={async (fd) => {
+            setError(null);
+            const res = await addProject(fd);
+            if (res.ok && res.redirectTo) {
+              setOpen(false);
+              router.push(res.redirectTo);
+              router.refresh();
+            } else {
+              setError(res.error ?? "Failed to create project.");
+            }
+          }}
+          className="space-y-4"
+        >
           <input type="hidden" name="country_id" value={countryId} />
 
           <div>
@@ -124,6 +140,12 @@ export function AddProjectButton({
               />
               <PersonSelect label="SEO specialist" name="seo_id" people={seos} />
             </div>
+          )}
+
+          {error && (
+            <p className="rounded-lg bg-status-error-bg px-3 py-2 text-sm text-status-error-text">
+              {error}
+            </p>
           )}
 
           <div className="flex justify-end gap-2 pt-2">
